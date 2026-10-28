@@ -118,7 +118,7 @@ export default function Onboarding() {
             <T style={{ marginTop: spacing.sm }}>We use your city to match you with verified local vendors.</T>
 
             <T variant="bodyStrong" style={styles.label}>Your name</T>
-            <TextInput value={name} onChangeText={setName} placeholder="e.g. Ayesha Khan" placeholderTextColor={colors.textSubtle} style={styles.input} autoCapitalize="words" />
+            <TextInput value={name} onChangeText={setName} placeholder="e.g. John Doe" placeholderTextColor={colors.textSubtle} style={styles.input} autoCapitalize="words" />
 
             <T variant="bodyStrong" style={styles.label}>Mobile number (optional)</T>
             <TextInput value={phone} onChangeText={setPhone} placeholder="03XX XXXXXXX" placeholderTextColor={colors.textSubtle} style={styles.input} keyboardType="phone-pad" maxLength={13} />
