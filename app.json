@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "RennovaAI",
+    "slug": "rennovaai",
+    "scheme": "rennovaai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "description": "See it before you build it — AI room previews, instant renovation estimates and verified local vendors with milestone escrow.",
+    "primaryColor": "#0AB49A",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rennovaai.app",
+      "buildNumber": "1"
+    },
+    "android": {
+      "package": "com.rennovaai.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFFFFF"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "RennovaAI needs access to your photos so you can choose a picture of the room you want to renovate.",
+          "cameraPermission": "RennovaAI uses the camera to photograph the room you want to renovate.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "backgroundColor": "#F7F9FB"
+  }
+}
