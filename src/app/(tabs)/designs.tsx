@@ -2,12 +2,14 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { DesignThumb } from '../../components/DesignPreview';
 import { Badge, Button, EmptyState, Row, Screen, T, tap } from '../../components/ui';
+import { designName, useT } from '../../i18n';
 import { dateLabel, pkrShort } from '../../lib/format';
 import { useApp } from '../../store/useApp';
 import { colors, radius, spacing } from '../../theme';
 
 export default function Designs() {
   const router = useRouter();
+  const { t } = useT();
   const { designs, resetDraft } = useApp();
   const start = () => {
     resetDraft();
@@ -15,20 +17,20 @@ export default function Designs() {
   };
 
   return (
-    <Screen back={false} title="My designs" right={designs.length ? <Button title="New" icon="add" small onPress={start} /> : undefined}>
+    <Screen back={false} title={t('designs.title')} right={designs.length ? <Button title={t('designs.new')} icon="add" small onPress={start} /> : undefined}>
       {designs.length === 0 ? (
-        <EmptyState icon="color-palette-outline" title="No designs yet" body="Photograph a room and RennovaAI will show you how it could look — with a cost estimate." action="Create your first design" onAction={start} />
+        <EmptyState icon="color-palette-outline" title={t('designs.emptyTitle')} body={t('designs.emptyBody')} action={t('designs.emptyAction')} onAction={start} />
       ) : (
         <View style={styles.grid}>
           {designs.map((d) => (
             <Pressable key={d.id} onPress={() => { tap(); router.push({ pathname: '/design/result', params: { id: d.id } }); }} style={styles.card}>
               <DesignThumb {...d} height={130} radius={0} />
               <View style={{ padding: spacing.md }}>
-                <T variant="bodyStrong" numberOfLines={1}>{d.name}</T>
+                <T variant="bodyStrong" numberOfLines={1}>{designName(d)}</T>
                 <T variant="caption">{dateLabel(d.createdAt)}</T>
                 <Row style={{ marginTop: 6 }} gap={4}>
                   <Badge label={pkrShort(d.estimate.mid).toUpperCase()} tone="navy" />
-                  {d.premium && <Badge label="PRO" tone="amber" />}
+                  {d.premium && <Badge label={t('designs.pro')} tone="amber" />}
                 </Row>
               </View>
             </Pressable>

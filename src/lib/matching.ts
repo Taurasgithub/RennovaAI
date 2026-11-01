@@ -1,6 +1,15 @@
+import type { ServiceType } from '../data/catalog';
 import { VENDORS, type Vendor } from '../data/vendors';
 import type { Estimate } from './estimate';
 import { roundTo } from './format';
+
+/** Why a vendor was shortlisted — rendered in the active language by the UI. */
+export type MatchReason =
+  | { kind: 'all' }
+  | { kind: 'covers' | 'partners'; services: ServiceType[] }
+  | { kind: 'budget' }
+  | { kind: 'available'; when: string }
+  | { kind: 'topRated' };
 
 export type Quote = {
   vendor: Vendor;
@@ -8,7 +17,7 @@ export type Quote = {
   days: number;
   score: number;
   coverage: number; // share of required services the vendor covers (0–1)
-  reasons: string[];
+  reasons: MatchReason[];
 };
 
 /**
@@ -26,25 +35,25 @@ export function matchVendors(estimate: Estimate, city: string, budget?: number, 
       const coverage = needed.length ? covered.length / needed.length : 1;
       const price = roundTo(estimate.mid * v.priceFactor, 1000);
       const days = Math.max(2, Math.round(estimate.days * v.speedFactor));
-      const reasons: string[] = [];
+      const reasons: MatchReason[] = [];
 
       let score = v.rating * 12; // up to 60
       score += coverage * 25;
-      if (coverage === 1) reasons.push('Covers every trade in your design');
+      if (coverage === 1) reasons.push({ kind: 'all' });
       else if (covered.length) {
-        reasons.push(`Covers ${covered.join(', ')}`);
-        reasons.push(`Brings partner trades for ${needed.filter((x) => !covered.includes(x)).join(', ')}`);
+        reasons.push({ kind: 'covers', services: covered });
+        reasons.push({ kind: 'partners', services: needed.filter((x) => !covered.includes(x)) });
       }
       if (budget && price <= budget) {
         score += 10;
-        reasons.push('Within your budget');
+        reasons.push({ kind: 'budget' });
       } else if (!budget) score += 5;
       if (v.availableFrom === 'Tomorrow' || v.availableFrom === 'This week') {
         score += 6;
-        reasons.push(`Available ${v.availableFrom.toLowerCase()}`);
+        reasons.push({ kind: 'available', when: v.availableFrom });
       }
       if (v.pro) score += 4; // featured placement for Vendor Pro
-      if (v.rating >= 4.8) reasons.push('Top rated');
+      if (v.rating >= 4.8) reasons.push({ kind: 'topRated' });
       score += Math.min(v.jobsCompleted, 150) / 30;
 
       return { vendor: v, price, days, score, coverage, reasons };

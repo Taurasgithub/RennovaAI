@@ -7,19 +7,21 @@ import { Badge, Button, Card, Divider, EmptyState, Row, Screen, Section, Stars, 
 import { SERVICE_ICONS } from '../../data/catalog';
 import { getVendor } from '../../data/vendors';
 import { roundTo } from '../../lib/format';
+import { availabilityLabel, cityLabel, designName, responseLabel, serviceLabel, useT, type TKey } from '../../i18n';
 import { useApp } from '../../store/useApp';
 import { colors, fonts, radius, spacing } from '../../theme';
 
-const CHECKS = ['CNIC & phone verified', 'Portfolio reviewed', 'Two customer references', 'Platform orientation completed'];
+const CHECKS: TKey[] = ['vendor.check1', 'vendor.check2', 'vendor.check3', 'vendor.check4'];
 
 export default function VendorProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { t } = useT();
   const vendor = getVendor(id);
   const latest = useApp((s) => s.designs[0]);
   const resetDraft = useApp((s) => s.resetDraft);
 
-  if (!vendor) return <Screen title="Vendor"><EmptyState icon="alert-circle-outline" title="Vendor not found" body="This listing is no longer available." /></Screen>;
+  if (!vendor) return <Screen title={t('vendor.title')}><EmptyState icon="alert-circle-outline" title={t('vendor.notFound')} body={t('vendor.gone')} /></Screen>;
 
   const quote = () => {
     if (latest) {
@@ -39,7 +41,7 @@ export default function VendorProfile() {
   };
 
   return (
-    <Screen padded={false} title="" footer={<Button title={latest ? `Get a quote for “${latest.name}”` : 'Design your room to get a quote'} icon="document-text-outline" onPress={quote} />}>
+    <Screen padded={false} title="" footer={<Button title={latest ? t('vendor.quoteFor', { name: designName(latest) }) : t('vendor.designFirst')} icon="document-text-outline" onPress={quote} />}>
       <View style={{ height: 170, marginHorizontal: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' }}>
         <RoomIllustration {...vendor.portfolio[0]} />
       </View>
@@ -48,16 +50,16 @@ export default function VendorProfile() {
           <View style={{ borderWidth: 4, borderColor: colors.bg, borderRadius: 24 }}>
             <VendorAvatar vendor={vendor} size={68} />
           </View>
-          {vendor.pro && <Badge label="FEATURED PRO" tone="amber" icon="star" />}
+          {vendor.pro && <Badge label={t('vendor.featuredPro')} tone="amber" icon="star" />}
         </Row>
         <T variant="h1" style={{ marginTop: spacing.md }}>{vendor.name}</T>
-        <T variant="small">{vendor.owner} · {vendor.area}, {vendor.city}</T>
+        <T variant="small">{vendor.owner} · {vendor.area}, {cityLabel(vendor.city)}</T>
 
         <Row style={{ marginTop: spacing.lg }} gap={spacing.sm}>
           {[
-            [vendor.rating.toFixed(1), `${vendor.reviewCount} reviews`, 'star'],
-            [String(vendor.jobsCompleted), 'jobs done', 'briefcase'],
-            [`${vendor.yearsExperience} yrs`, 'experience', 'ribbon'],
+            [vendor.rating.toFixed(1), t('vendor.reviewsCount', { n: vendor.reviewCount }), 'star'],
+            [String(vendor.jobsCompleted), t('vendor.jobsDone'), 'briefcase'],
+            [t('vendor.yrs', { n: vendor.yearsExperience }), t('vendor.experience'), 'ribbon'],
           ].map(([v, l, icon]) => (
             <Card key={l} style={styles.stat}>
               <Ionicons name={icon as 'star'} size={16} color={colors.amber} />
@@ -67,17 +69,17 @@ export default function VendorProfile() {
           ))}
         </Row>
 
-        <Section title="About">
+        <Section title={t('vendor.about')}>
           <T>{vendor.about}</T>
           <Row style={{ flexWrap: 'wrap', marginTop: spacing.md }} gap={6}>
-            {vendor.services.map((s) => <Badge key={s} label={s.toUpperCase()} tone="teal" icon={SERVICE_ICONS[s]} />)}
-            <Badge label={`AVAILABLE ${vendor.availableFrom.toUpperCase()}`} tone="green" icon="calendar-outline" />
-            <Badge label={`REPLIES ${vendor.responseTime.toUpperCase()}`} tone="gray" icon="chatbubble-outline" />
+            {vendor.services.map((s) => <Badge key={s} label={serviceLabel(s).toUpperCase()} tone="teal" icon={SERVICE_ICONS[s]} />)}
+            <Badge label={t('common.availableUpper', { when: availabilityLabel(vendor.availableFrom).toUpperCase() })} tone="green" icon="calendar-outline" />
+            <Badge label={t('common.repliesUpper', { time: responseLabel(vendor.responseTime).toUpperCase() })} tone="gray" icon="chatbubble-outline" />
           </Row>
         </Section>
       </View>
 
-      <Section title="Portfolio" style={{ paddingHorizontal: spacing.lg }} />
+      <Section title={t('vendor.portfolio')} style={{ paddingHorizontal: spacing.lg }} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
         {vendor.portfolio.map((p) => (
           <View key={p.title} style={{ width: 220 }}>
@@ -90,18 +92,18 @@ export default function VendorProfile() {
       </ScrollView>
 
       <View style={{ paddingHorizontal: spacing.lg }}>
-        <Section title="RennovaAI verification">
+        <Section title={t('vendor.verification')}>
           <Card>
             {CHECKS.map((c, i) => (
               <Row key={c} style={{ marginTop: i ? spacing.md : 0 }}>
                 <Ionicons name="checkmark-circle" size={20} color={colors.teal} />
-                <T variant="bodyStrong">{c}</T>
+                <T variant="bodyStrong">{t(c)}</T>
               </Row>
             ))}
           </Card>
         </Section>
 
-        <Section title="Reviews">
+        <Section title={t('vendor.reviews')}>
           <Card>
             {vendor.reviews.map((r, i) => (
               <View key={r.name + i}>

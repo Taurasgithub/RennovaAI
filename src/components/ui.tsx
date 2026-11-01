@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import type { ComponentProps, ReactNode } from 'react';
+import { isValidElement, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -17,6 +17,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useT } from '../i18n';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -41,8 +42,51 @@ const variantStyle: Record<Variant, TextStyle> = {
   overline: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, color: colors.amberDark, letterSpacing: 1.6, textTransform: 'uppercase' },
 };
 
-export function T({ variant = 'body', style, ...rest }: TextProps & { variant?: Variant }) {
-  return <Text {...rest} style={[variantStyle[variant], style]} />;
+/* Urdu: text containing Arabic-script characters switches to Nastaliq, which needs much taller
+   lines and right-to-left direction. Latin-only text (names, prices, codes) keeps Montserrat. */
+
+const ARABIC_SCRIPT = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]/;
+
+function hasUrdu(node: ReactNode): boolean {
+  if (typeof node === 'string') return ARABIC_SCRIPT.test(node);
+  if (Array.isArray(node)) return node.some(hasUrdu);
+  if (isValidElement(node)) return hasUrdu((node.props as { children?: ReactNode }).children);
+  return false;
+}
+
+const URDU_FONT: Record<string, string> = {
+  [fonts.regular]: fonts.urdu,
+  [fonts.medium]: fonts.urdu,
+  [fonts.semibold]: fonts.urduBold,
+  [fonts.bold]: fonts.urduBold,
+  [fonts.extrabold]: fonts.urduBold,
+};
+
+function urduStyle(style: StyleProp<TextStyle>): StyleProp<TextStyle> {
+  const s = StyleSheet.flatten(style) ?? {};
+  const urduFont = URDU_FONT[s.fontFamily ?? fonts.regular];
+  if (!urduFont) return style; // already an Urdu font (or a custom one): leave it alone
+  const fontSize = Math.max(s.fontSize ?? 14, 12); // Nastaliq is unreadable below ~12
+  const lineHeight = Math.round(Math.max((s.lineHeight ?? fontSize * 1.3) * 1.45, fontSize * 1.95));
+  return { ...s, fontFamily: urduFont, fontSize, lineHeight, letterSpacing: 0, textTransform: 'none', writingDirection: 'rtl' };
+}
+
+/** Plain Text that switches to the Urdu font when its content is Urdu. */
+export function Txt({ style, children, ...rest }: TextProps) {
+  return (
+    <Text {...rest} style={hasUrdu(children) ? urduStyle(style) : style}>
+      {children}
+    </Text>
+  );
+}
+
+export function T({ variant = 'body', style, children, ...rest }: TextProps & { variant?: Variant }) {
+  const s = [variantStyle[variant], style];
+  return (
+    <Text {...rest} style={hasUrdu(children) ? urduStyle(s) : s}>
+      {children}
+    </Text>
+  );
 }
 
 /* ---------- Buttons ---------- */
@@ -103,7 +147,7 @@ export function Button({
       ) : (
         <>
           {icon && <Ionicons name={icon} size={small ? 16 : 19} color={c.fg} />}
-          <Text style={[styles.btnText, small && { fontSize: 13.5 }, { color: c.fg }]}>{title}</Text>
+          <Txt style={[styles.btnText, small && { fontSize: 13.5 }, { color: c.fg }]}>{title}</Txt>
           {iconRight && <Ionicons name={iconRight} size={small ? 16 : 19} color={c.fg} />}
         </>
       )}
@@ -148,12 +192,13 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
 
 export function Header({ title, subtitle, right, back = true, dark }: { title?: string; subtitle?: string; right?: ReactNode; back?: boolean; dark?: boolean }) {
   const router = useRouter();
+  const { t } = useT();
   return (
     <View style={styles.header}>
       {back ? (
         <IconButton
           icon="chevron-back"
-          label="Go back"
+          label={t('common.goBack')}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           bg={dark ? 'rgba(255,255,255,0.15)' : colors.white}
           color={dark ? colors.white : colors.navy}
@@ -254,7 +299,7 @@ export function Chip({ label, selected, onPress, icon, color }: { label: string;
     >
       {color && <View style={[styles.swatchDot, { backgroundColor: color }]} />}
       {icon && <Ionicons name={icon} size={15} color={selected ? colors.white : colors.navy} />}
-      <Text style={[styles.chipText, selected && { color: colors.white }]}>{label}</Text>
+      <Txt style={[styles.chipText, selected && { color: colors.white }]}>{label}</Txt>
     </Pressable>
   );
 }
@@ -271,7 +316,7 @@ export function Badge({ label, tone = 'teal', icon }: { label: string; tone?: 't
   return (
     <View style={[styles.badge, { backgroundColor: bg }]}>
       {icon && <Ionicons name={icon} size={12} color={fg} />}
-      <Text style={[styles.badgeText, { color: fg }]}>{label}</Text>
+      <Txt style={[styles.badgeText, { color: fg }]}>{label}</Txt>
     </View>
   );
 }

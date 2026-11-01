@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
 import { SERVICE_ICONS } from '../data/catalog';
 import type { Vendor } from '../data/vendors';
+import { availabilityLabel, cityLabel, serviceLabel, useT } from '../i18n';
 import { colors, fonts, spacing } from '../theme';
 import { RoomIllustration } from './RoomIllustration';
 import { Badge, Card, Row, T } from './ui';
@@ -22,13 +23,14 @@ export function VendorAvatar({ vendor, size = 52 }: { vendor: Vendor; size?: num
 }
 
 export function VendorCard({ vendor, onPress }: { vendor: Vendor; onPress: () => void }) {
+  const { t } = useT();
   const p = vendor.portfolio[0];
   return (
     <Card onPress={onPress} style={{ padding: 0, overflow: 'hidden', marginBottom: spacing.md }}>
       <View style={{ height: 120 }}>
         <RoomIllustration paletteId={p.paletteId} styleId={p.styleId} flooringId={p.flooringId} ceilingId={p.ceilingId} />
         <View style={{ position: 'absolute', left: 10, top: 10, flexDirection: 'row', gap: 6 }}>
-          {vendor.pro && <Badge label="FEATURED" tone="amber" icon="star" />}
+          {vendor.pro && <Badge label={t('vendors.featured')} tone="amber" icon="star" />}
         </View>
       </View>
       <View style={{ padding: spacing.lg }}>
@@ -36,7 +38,7 @@ export function VendorCard({ vendor, onPress }: { vendor: Vendor; onPress: () =>
           <VendorAvatar vendor={vendor} size={46} />
           <View style={{ flex: 1 }}>
             <T variant="h3" numberOfLines={1}>{vendor.name}</T>
-            <T variant="small" numberOfLines={1}>{vendor.services.join(' · ')}</T>
+            <T variant="small" numberOfLines={1}>{vendor.services.map(serviceLabel).join(' · ')}</T>
             <Row style={{ marginTop: 6 }} gap={12}>
               <Row gap={3}>
                 <Ionicons name="star" size={13} color={colors.amber} />
@@ -45,17 +47,17 @@ export function VendorCard({ vendor, onPress }: { vendor: Vendor; onPress: () =>
               </Row>
               <Row gap={3}>
                 <Ionicons name="location-outline" size={13} color={colors.textSubtle} />
-                <T variant="caption">{vendor.area}, {vendor.city}</T>
+                <T variant="caption">{vendor.area}, {cityLabel(vendor.city)}</T>
               </Row>
             </Row>
           </View>
         </Row>
         <Row style={{ marginTop: spacing.md, flexWrap: 'wrap' }} gap={6}>
-          {vendor.verified && <Badge label="VERIFIED" tone="teal" icon="shield-checkmark" />}
-          <Badge label={`${vendor.jobsCompleted} JOBS`} tone="navy" />
-          <Badge label={vendor.availableFrom.toUpperCase()} tone="green" icon="calendar-outline" />
+          {vendor.verified && <Badge label={t('common.verified')} tone="teal" icon="shield-checkmark" />}
+          <Badge label={t('common.jobsUpper', { n: vendor.jobsCompleted })} tone="navy" />
+          <Badge label={availabilityLabel(vendor.availableFrom).toUpperCase()} tone="green" icon="calendar-outline" />
           {vendor.services.slice(0, 1).map((s) => (
-            <Badge key={s} label={s.toUpperCase()} tone="gray" icon={SERVICE_ICONS[s]} />
+            <Badge key={s} label={serviceLabel(s).toUpperCase()} tone="gray" icon={SERVICE_ICONS[s]} />
           ))}
         </Row>
       </View>

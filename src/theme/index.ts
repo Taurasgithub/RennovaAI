@@ -37,6 +37,9 @@ export const fonts = {
   semibold: 'Montserrat_600SemiBold',
   bold: 'Montserrat_700Bold',
   extrabold: 'Montserrat_800ExtraBold',
+  // Urdu (Nastaliq) — Montserrat has no Arabic-script glyphs.
+  urdu: 'NotoNastaliqUrdu_400Regular',
+  urduBold: 'NotoNastaliqUrdu_700Bold',
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, xxxl: 40 } as const;

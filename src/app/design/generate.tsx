@@ -5,17 +5,18 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, T } from '../../components/ui';
-import { ROOM_TYPES, STYLES, findById } from '../../data/catalog';
 import { estimateCost } from '../../lib/estimate';
 import { generateDesign } from '../../services/ai';
+import { designName, useT, type TKey } from '../../i18n';
 import { useApp } from '../../store/useApp';
 import { colors, fonts, spacing } from '../../theme';
 
-const STEPS = ['Reading your room layout', 'Applying colours & materials', 'Styling furniture & lighting', 'Calculating your estimate'];
+const STEPS: TKey[] = ['generate.step1', 'generate.step2', 'generate.step3', 'generate.step4'];
 
 export default function Generate() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t, lang } = useT();
   const { draft, saveDesign, user, designs } = useApp();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +47,11 @@ export default function Generate() {
     setStep(0);
     try {
       const [result] = await Promise.all([generateDesign(draft), new Promise((r) => setTimeout(r, 2600))]);
-      const room = findById(ROOM_TYPES, draft.roomTypeId);
-      const style = findById(STYLES, draft.styleId);
       const { photoUri, ...choices } = draft;
+      const nameParts = { styleId: draft.styleId, roomTypeId: draft.roomTypeId, n: designs.length + 1 };
       const id = saveDesign({
-        name: `${style.label} ${room.label.toLowerCase()} #${designs.length + 1}`,
+        name: designName({ name: '', nameParts }),
+        nameParts,
         choices,
         photoUri,
         resultUri: result.uri,
@@ -61,7 +62,8 @@ export default function Generate() {
       });
       router.replace({ pathname: '/design/result', params: { id } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong while generating your design.');
+      // Server messages are English; in Urdu show our own wording instead.
+      setError(lang === 'en' && e instanceof Error ? e.message : t('generate.error'));
     }
   };
 
@@ -85,7 +87,7 @@ export default function Generate() {
           </Animated.View>
         </View>
         <T variant="h1" style={{ color: colors.white, marginTop: spacing.xxl, textAlign: 'center' }}>
-          {error ? 'Generation paused' : 'Reimagining your room…'}
+          {error ? t('generate.paused') : t('generate.working')}
         </T>
         {error ? (
           <T style={{ color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginTop: spacing.md }}>{error}</T>
@@ -94,7 +96,7 @@ export default function Generate() {
             {STEPS.map((s, i) => (
               <View key={s} style={styles.stepRow}>
                 <Ionicons name={i < step ? 'checkmark-circle' : i === step ? 'ellipse' : 'ellipse-outline'} size={18} color={i <= step ? colors.teal : 'rgba(255,255,255,0.35)'} />
-                <T style={{ color: i <= step ? colors.white : 'rgba(255,255,255,0.5)', fontFamily: fonts.medium }}>{s}</T>
+                <T style={{ color: i <= step ? colors.white : 'rgba(255,255,255,0.5)', fontFamily: fonts.medium }}>{t(s)}</T>
               </View>
             ))}
           </View>
@@ -102,8 +104,8 @@ export default function Generate() {
       </View>
       {error && (
         <View style={{ gap: spacing.md, paddingHorizontal: spacing.xl }}>
-          <Button title="Try again" kind="amber" icon="refresh" onPress={run} />
-          <Button title="Back to design" kind="secondary" onPress={() => router.back()} />
+          <Button title={t('generate.tryAgain')} kind="amber" icon="refresh" onPress={run} />
+          <Button title={t('generate.back')} kind="secondary" onPress={() => router.back()} />
         </View>
       )}
     </LinearGradient>

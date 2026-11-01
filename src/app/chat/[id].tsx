@@ -6,19 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState, Header, T, tap } from '../../components/ui';
 import { getVendor } from '../../data/vendors';
 import { timeLabel } from '../../lib/format';
+import { responseLabel, useT, type TKey } from '../../i18n';
 import { useApp } from '../../store/useApp';
 import { colors, fonts, radius, spacing } from '../../theme';
 
-const AUTO_REPLIES = [
-  'Noted! I will share an update with photos by this evening.',
-  'Sure, we can do that. I will adjust the plan and confirm.',
-  'Our team will reach the site at 10 am. Please keep the room clear.',
-  'Thank you! Materials have been ordered from our partner store.',
-];
+const AUTO_REPLIES: TKey[] = ['chat.auto1', 'chat.auto2', 'chat.auto3', 'chat.auto4'];
 
 export default function Chat() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
+  const { t } = useT();
   const project = useApp((s) => s.projects.find((p) => p.id === id));
   const addMessage = useApp((s) => s.addMessage);
   const [text, setText] = useState('');
@@ -28,19 +25,19 @@ export default function Chat() {
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
-  if (!project) return <View style={{ flex: 1, paddingTop: insets.top }}><Header title="Chat" /><EmptyState icon="chatbubbles-outline" title="Chat unavailable" body="This project no longer exists." /></View>;
+  if (!project) return <View style={{ flex: 1, paddingTop: insets.top }}><Header title={t('chat.title')} /><EmptyState icon="chatbubbles-outline" title={t('chat.unavailable')} body={t('chat.gone')} /></View>;
   const vendor = getVendor(project.vendorId);
 
   const send = () => {
-    const t = text.trim();
-    if (!t) return;
+    const msg = text.trim();
+    if (!msg) return;
     tap();
-    addMessage(project.id, { from: 'me', text: t });
+    addMessage(project.id, { from: 'me', text: msg });
     setText('');
     // TODO(go-live): replace with real-time messaging (e.g. Firebase / WebSocket). Simulated vendor reply for the beta.
     setTyping(true);
     timer.current = setTimeout(() => {
-      addMessage(project.id, { from: 'vendor', text: AUTO_REPLIES[replyIdx.current++ % AUTO_REPLIES.length] });
+      addMessage(project.id, { from: 'vendor', text: t(AUTO_REPLIES[replyIdx.current++ % AUTO_REPLIES.length]) });
       setTyping(false);
     }, 1400);
   };
@@ -49,7 +46,7 @@ export default function Chat() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Header title={vendor?.name ?? 'Vendor'} subtitle={typing ? 'typing…' : `Usually replies ${vendor?.responseTime ?? 'soon'}`} />
+      <Header title={vendor?.name ?? t('chat.vendor')} subtitle={typing ? t('chat.typing') : t('chat.replies', { time: vendor ? responseLabel(vendor.responseTime) : t('chat.soon') })} />
       <FlatList
         inverted
         data={data}
@@ -66,8 +63,8 @@ export default function Chat() {
         }}
       />
       <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <TextInput value={text} onChangeText={setText} placeholder="Message" placeholderTextColor={colors.textSubtle} style={styles.input} multiline onSubmitEditing={send} />
-        <Pressable accessibilityLabel="Send" onPress={send} style={[styles.send, !text.trim() && { opacity: 0.5 }]}>
+        <TextInput value={text} onChangeText={setText} placeholder={t('chat.placeholder')} placeholderTextColor={colors.textSubtle} style={styles.input} multiline onSubmitEditing={send} />
+        <Pressable accessibilityLabel={t('chat.send')} onPress={send} style={[styles.send, !text.trim() && { opacity: 0.5 }]}>
           <Ionicons name="send" size={18} color={colors.white} />
         </Pressable>
       </View>

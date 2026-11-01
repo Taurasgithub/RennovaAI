@@ -5,6 +5,9 @@
 export const config = {
   /** Base URL of the RennovaAI API server (see /server). Leave empty to run in on-device preview mode. */
   apiUrl: (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, ''),
+  /** Supabase project (accounts & roles). Both values are public by design; row-level security protects the data. */
+  supabaseUrl: (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, ''),
+  supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
   supportWhatsApp: process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? '923000000000',
   supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? 'support@rennovaai.com',
   privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? 'https://rennovaai.com/privacy',

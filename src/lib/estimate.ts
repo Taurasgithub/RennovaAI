@@ -14,7 +14,18 @@ export type DesignChoices = {
   notes: string;
 };
 
-export type EstimateLine = { label: string; amount: number; service: ServiceType };
+/**
+ * `part`/`ref`/`qty` let the UI rebuild the label in the active language (see lineLabel);
+ * `label` is the English text, kept for estimates saved before those fields existed.
+ */
+export type EstimateLine = {
+  label: string;
+  amount: number;
+  service: ServiceType;
+  part?: 'walls' | 'floor' | 'ceiling' | 'extra' | 'sundries';
+  ref?: string;
+  qty?: number;
+};
 
 export type Estimate = {
   low: number;
@@ -45,17 +56,17 @@ export function estimateCost(c: DesignChoices, city: string): Estimate {
   const wallArea = Math.round(side * 4 * CEILING_HEIGHT_FT * 0.85); // minus ~15% for doors & windows
 
   const lines: EstimateLine[] = [];
-  lines.push({ label: `Walls · ${wall.label} (${wallArea} sq ft)`, amount: wallArea * wall.rate, service: 'Painter' });
-  if (floor.rate > 0) lines.push({ label: `Flooring · ${floor.label} (${c.area} sq ft)`, amount: c.area * floor.rate, service: 'Contractor' });
-  if (ceiling.rate > 0) lines.push({ label: `Ceiling · ${ceiling.label}`, amount: c.area * ceiling.rate, service: ceiling.id === 'wood' ? 'Carpenter' : 'Contractor' });
+  lines.push({ label: `Walls · ${wall.label} (${wallArea} sq ft)`, amount: wallArea * wall.rate, service: 'Painter', part: 'walls', ref: wall.id, qty: wallArea });
+  if (floor.rate > 0) lines.push({ label: `Flooring · ${floor.label} (${c.area} sq ft)`, amount: c.area * floor.rate, service: 'Contractor', part: 'floor', ref: floor.id, qty: c.area });
+  if (ceiling.rate > 0) lines.push({ label: `Ceiling · ${ceiling.label}`, amount: c.area * ceiling.rate, service: ceiling.id === 'wood' ? 'Carpenter' : 'Contractor', part: 'ceiling', ref: ceiling.id });
   for (const id of c.extras) {
     const ex = EXTRAS.find((e) => e.id === id);
-    if (ex) lines.push({ label: ex.label, amount: ex.cost, service: ex.service });
+    if (ex) lines.push({ label: ex.label, amount: ex.cost, service: ex.service, part: 'extra', ref: ex.id });
   }
   const scaled = lines.map((l) => ({ ...l, amount: roundTo(l.amount * style.multiplier * cityF) }));
   const subtotal = scaled.reduce((s, l) => s + l.amount, 0);
   const sundries = roundTo(subtotal * 0.06);
-  scaled.push({ label: 'Site prep, protection & clean-up', amount: sundries, service: 'Contractor' });
+  scaled.push({ label: 'Site prep, protection & clean-up', amount: sundries, service: 'Contractor', part: 'sundries' });
   const mid = subtotal + sundries;
 
   // Timeline: base 2 days for paint + effort-weighted days for other trades.

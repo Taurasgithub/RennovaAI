@@ -1,13 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
-import { PanResponder, StyleSheet, Text, View } from 'react-native';
+import { PanResponder, StyleSheet, View } from 'react-native';
+import { useT } from '../i18n';
 import { colors, fonts, radius } from '../theme';
+import { Txt } from './ui';
 
 /**
  * Drag-to-compare slider. "after" is drawn on the left of the handle and
  * "before" on the right, so dragging right reveals more of the renovation.
  */
 export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode; after: ReactNode; height?: number }) {
+  const { t } = useT();
   const [width, setWidth] = useState(0);
   const [pos, setPos] = useState(0.55);
   const widthRef = useRef(0);
@@ -47,7 +50,7 @@ export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode
         setWidth(e.nativeEvent.layout.width);
       }}
       {...responder.panHandlers}
-      accessibilityLabel="Before and after comparison. Drag to compare."
+      accessibilityLabel={t('ba.a11y')}
     >
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         {before}
@@ -56,10 +59,10 @@ export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode
         <View style={{ width, height }}>{after}</View>
       </View>
       <View style={[styles.label, { left: 10 }]} pointerEvents="none">
-        <Text style={[styles.labelText, { color: colors.navyDeep }]}>AFTER</Text>
+        <Txt style={[styles.labelText, { color: colors.navyDeep }]}>{t('ba.after')}</Txt>
       </View>
       <View style={[styles.label, styles.labelDark, { right: 10 }]} pointerEvents="none">
-        <Text style={styles.labelText}>BEFORE</Text>
+        <Txt style={styles.labelText}>{t('ba.before')}</Txt>
       </View>
       {width > 0 && (
         <View style={[styles.handleLine, { left: x - 1.5 }]} pointerEvents="none">

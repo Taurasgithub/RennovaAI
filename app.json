@@ -56,7 +56,9 @@
           "cameraPermission": "RennovaAI uses the camera to photograph the room you want to renovate.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "backgroundColor": "#F7F9FB"
   }

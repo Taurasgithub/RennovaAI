@@ -2,16 +2,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { DesignChoices, Estimate } from '../lib/estimate';
-import { uid } from '../lib/format';
+import { uid } from '../lib/id';
 import type { ServiceType } from '../data/catalog';
 
 export type User = { name: string; phone: string; city: string };
+
+export type Language = 'en' | 'ur';
 
 export type ResultMode = 'ai' | 'preview' | 'illustration';
 
 export type Design = {
   id: string;
   name: string;
+  /** Set for auto-generated names so they can be shown in the active language. */
+  nameParts?: { styleId: string; roomTypeId: string; n: number };
   createdAt: string;
   choices: DesignChoices;
   photoUri: string | null; // null = sample room illustration
@@ -23,7 +27,8 @@ export type Design = {
 };
 
 export type MilestoneStatus = 'awaiting_deposit' | 'in_escrow' | 'released';
-export type Milestone = { id: string; title: string; pct: number; amount: number; status: MilestoneStatus };
+/** `stage` (0–2) picks the translated title; `title` is the English fallback kept for older saved projects. */
+export type Milestone = { id: string; title: string; stage?: number; pct: number; amount: number; status: MilestoneStatus };
 export type Message = { id: string; from: 'me' | 'vendor'; text: string; at: string };
 
 export type Project = {
@@ -74,6 +79,7 @@ export const emptyDraft = (): Draft => ({
 type State = {
   hydrated: boolean;
   onboarded: boolean;
+  language: Language;
   user: User | null;
   draft: Draft;
   designs: Design[];
@@ -86,12 +92,13 @@ type State = {
 type Actions = {
   setUser: (u: User) => void;
   completeOnboarding: () => void;
+  setLanguage: (l: Language) => void;
   updateDraft: (p: Partial<Draft>) => void;
   resetDraft: () => void;
   saveDesign: (d: Omit<Design, 'id' | 'createdAt'>) => string;
   updateDesign: (id: string, p: Partial<Design>) => void;
   deleteDesign: (id: string) => void;
-  createProject: (p: Omit<Project, 'id' | 'createdAt' | 'status' | 'messages'>) => string;
+  createProject: (p: Omit<Project, 'id' | 'createdAt' | 'status' | 'messages'>, greeting: string) => string;
   depositMilestone: (projectId: string, milestoneId: string) => void;
   releaseMilestone: (projectId: string, milestoneId: string) => void;
   addMessage: (projectId: string, m: Omit<Message, 'id' | 'at'>) => void;
@@ -105,6 +112,7 @@ type Actions = {
 const initial: State = {
   hydrated: false,
   onboarded: false,
+  language: 'en',
   user: null,
   draft: emptyDraft(),
   designs: [],
@@ -123,6 +131,7 @@ export const useApp = create<State & Actions>()(
       ...initial,
       setUser: (user) => set({ user }),
       completeOnboarding: () => set({ onboarded: true }),
+      setLanguage: (language) => set({ language }),
       updateDraft: (p) => set({ draft: { ...get().draft, ...p } }),
       resetDraft: () => set({ draft: emptyDraft() }),
       saveDesign: (d) => {
@@ -132,7 +141,7 @@ export const useApp = create<State & Actions>()(
       },
       updateDesign: (id, p) => set({ designs: get().designs.map((d) => (d.id === id ? { ...d, ...p } : d)) }),
       deleteDesign: (id) => set({ designs: get().designs.filter((d) => d.id !== id) }),
-      createProject: (p) => {
+      createProject: (p, greeting) => {
         const id = uid();
         const now = new Date().toISOString();
         const project: Project = {
@@ -141,7 +150,7 @@ export const useApp = create<State & Actions>()(
           createdAt: now,
           status: 'active',
           messages: [
-            { id: uid(), from: 'vendor', text: `Assalam-o-Alaikum! Thank you for booking "${p.title}". Your first milestone is safely in escrow — I'll confirm the site visit time shortly.`, at: now },
+            { id: uid(), from: 'vendor', text: greeting, at: now },
           ],
         };
         set({ projects: [project, ...get().projects] });
