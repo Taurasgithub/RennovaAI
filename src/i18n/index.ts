@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { ServiceType } from '../data/catalog';
 import type { EstimateLine } from '../lib/estimate';
 import type { MatchReason } from '../lib/matching';
+import type { BudgetRange } from '../lib/supabase';
 import type { Design, Milestone, Project } from '../store/useApp';
 import { useApp, type Language } from '../store/useApp';
 import { en, type TKey } from './en';
@@ -56,6 +57,11 @@ const AVAIL: Record<string, TKey> = {
   Flexible: 'avail.flexible',
 };
 export const availabilityLabel = (s: string) => (AVAIL[s] ? translate(AVAIL[s]) : s);
+
+export const budgetLabel = (b: BudgetRange) => translate(`budget.${b}` as TKey);
+
+/** "4.8", or "New" for vendor accounts that have no reviews yet. */
+export const ratingLabel = (v: { rating: number; reviewCount: number }) => (v.reviewCount ? v.rating.toFixed(1) : translate('vendor.new'));
 
 /** "~1 hr", "~2 hrs", "~30 min" → localized. */
 export const responseLabel = (s: string) => {

@@ -1,8 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMarketplace } from '../data/marketplace';
 import { accountsEnabled, supabase, type Profile, type Role, type VendorProfile } from '../lib/supabase';
-import { useApp } from '../store/useApp';
+import { useApp, type User } from '../store/useApp';
+
+/** Fields a user may edit on their own profile (role/status are admin-only; the database enforces that too). */
+export type ProfilePatch = Partial<
+  Pick<Profile, 'full_name' | 'phone' | 'city' | 'role' | 'avatar_url' | 'bio' | 'area' | 'preferred_styles' | 'budget_range' | 'job_title'>
+>;
+/** Business-profile fields a vendor edits after applying (approval fields are admin-only). */
+export type VendorPatch = Partial<
+  Pick<VendorProfile, 'business_name' | 'phone' | 'city' | 'services' | 'about' | 'logo_url' | 'cover_url' | 'service_areas' | 'working_hours' | 'whatsapp' | 'portfolio_urls' | 'years_experience'>
+>;
 
 // Role picked on the Welcome screen before an OAuth redirect (Google/Apple can't carry sign-up metadata).
 export const PENDING_ROLE_KEY = 'rennovaai.pendingRole';
@@ -18,7 +28,8 @@ type AuthState = {
   /** Set when a suspended account was signed out, so the Welcome screen can explain why. */
   notice: 'suspended' | null;
   refresh: () => Promise<void>;
-  updateProfile: (patch: Partial<Pick<Profile, 'full_name' | 'phone' | 'city' | 'role'>>) => Promise<string | null>;
+  updateProfile: (patch: ProfilePatch) => Promise<string | null>;
+  updateVendor: (patch: VendorPatch) => Promise<string | null>;
   signOut: () => Promise<void>;
   clearNotice: () => void;
 };
@@ -29,6 +40,20 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
+}
+
+/** Copy of the account profile the customer screens read from the local store. */
+export function userFromProfile(p: Profile): User {
+  return {
+    name: p.full_name,
+    phone: p.phone,
+    city: p.city,
+    avatarUri: p.avatar_url,
+    bio: p.bio,
+    area: p.area,
+    preferredStyles: p.preferred_styles,
+    budget: p.budget_range,
+  };
 }
 
 /** Clears on-device designs/projects so the next account on this phone starts clean; keeps the language. */
@@ -81,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Customer screens read name/phone/city from the local store.
     if (prof?.full_name) {
       const app = useApp.getState();
-      app.setUser({ name: prof.full_name, phone: prof.phone, city: prof.city });
+      app.setUser(userFromProfile(prof));
       app.completeOnboarding();
     }
     setReady(true);
@@ -89,6 +114,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!enabled) return;
+    // Approved vendor accounts are public; load them up front so matching and bookings can find them.
+    useMarketplace.getState().load();
     supabase.auth.getSession().then(({ data }) => load(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       // TOKEN_REFRESHED keeps the same user — no need to refetch the profile.
@@ -111,10 +138,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.from('profiles').update(patch).eq('id', profile.id).select().single<Profile>();
       if (error) return error.message;
       setProfile(data);
-      if (data.full_name) useApp.getState().setUser({ name: data.full_name, phone: data.phone, city: data.city });
+      if (data.full_name) useApp.getState().setUser(userFromProfile(data));
       return null;
     },
     [profile],
+  );
+
+  const updateVendor = useCallback<AuthState['updateVendor']>(
+    async (patch) => {
+      if (!vendor) return 'no-application';
+      const { data, error } = await supabase.from('vendor_profiles').update(patch).eq('user_id', vendor.user_id).select().single<VendorProfile>();
+      if (error) return error.message;
+      setVendor(data);
+      return null;
+    },
+    [vendor],
   );
 
   const signOut = useCallback(async () => {
@@ -122,8 +160,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthState>(
-    () => ({ enabled, ready, session, profile, vendor, notice, refresh, updateProfile, signOut, clearNotice: () => setNotice(null) }),
-    [enabled, ready, session, profile, vendor, notice, refresh, updateProfile, signOut],
+    () => ({ enabled, ready, session, profile, vendor, notice, refresh, updateProfile, updateVendor, signOut, clearNotice: () => setNotice(null) }),
+    [enabled, ready, session, profile, vendor, notice, refresh, updateProfile, updateVendor, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAdminData } from '../../admin/useAdminData';
 import { ROLE_LABEL, ROLE_TONE } from '../../components/AccountPanel';
+import { Avatar } from '../../components/Avatar';
 import { Badge, Button, Card, Row, Screen, Section, T, type IconName } from '../../components/ui';
 import { cityLabel, serviceLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
@@ -69,6 +70,7 @@ export default function AdminOverview() {
             <Card style={{ paddingVertical: spacing.sm }}>
               {profiles.slice(0, 6).map((p, i) => (
                 <Row key={p.id} style={[{ paddingVertical: spacing.sm }, i > 0 && styles.divider]}>
+                  <Avatar uri={p.avatar_url} name={p.full_name || p.email} size={36} round />
                   <View style={{ flex: 1 }}>
                     <T variant="bodyStrong" numberOfLines={1}>{p.full_name || p.email}</T>
                     <T variant="caption" numberOfLines={1}>{p.email} · {dateLabel(p.created_at)}</T>

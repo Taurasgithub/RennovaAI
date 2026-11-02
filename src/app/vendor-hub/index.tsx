@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 import { useAuth } from '../../auth/AuthProvider';
+import { Avatar } from '../../components/Avatar';
 import { Badge, Button, Card, IconTile, Row, Screen, Section, T } from '../../components/ui';
 import { cityLabel, serviceLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
@@ -26,8 +27,13 @@ export default function VendorDashboard() {
 
   return (
     <Screen back={false} title={t('vendorHub.title')} subtitle={vendor?.business_name}>
-      <T variant="small" style={{ marginTop: spacing.sm }}>{t('home.greeting')}</T>
-      <T variant="h1">{first || t('home.there')}</T>
+      <Row style={{ marginTop: spacing.sm }} gap={spacing.md}>
+        <Avatar uri={vendor?.logo_url ?? profile?.avatar_url} name={vendor?.business_name || profile?.full_name || 'R'} size={52} round />
+        <View style={{ flex: 1 }}>
+          <T variant="small">{t('home.greeting')}</T>
+          <T variant="h1" numberOfLines={1}>{first || t('home.there')}</T>
+        </View>
+      </Row>
 
       {!vendor ? (
         <Card style={{ marginTop: spacing.lg, backgroundColor: colors.navy }}>

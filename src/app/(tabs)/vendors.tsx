@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { VendorCard } from '../../components/VendorCard';
 import { Badge, Chip, EmptyState, Row, Screen, T } from '../../components/ui';
 import { config } from '../../config';
 import { SERVICE_ICONS, SERVICE_TYPES, type ServiceType } from '../../data/catalog';
+import { useMarketplace } from '../../data/marketplace';
 import { VENDORS } from '../../data/vendors';
 import { cityLabel, serviceLabel, useT } from '../../i18n';
 import { useApp } from '../../store/useApp';
@@ -13,6 +14,13 @@ import { colors, fonts, radius, spacing } from '../../theme';
 
 export default function Vendors() {
   const router = useRouter();
+  const accountVendors = useMarketplace((s) => s.accountVendors);
+  const loadMarketplace = useMarketplace((s) => s.load);
+  useFocusEffect(
+    useCallback(() => {
+      loadMarketplace();
+    }, [loadMarketplace]),
+  );
   const { t } = useT();
   const userCity = useApp((s) => s.user?.city ?? 'Sukkur');
   const [city, setCity] = useState<string>(userCity);
@@ -21,12 +29,12 @@ export default function Vendors() {
 
   const list = useMemo(
     () =>
-      VENDORS.filter((v) => v.city === city)
+      [...accountVendors, ...VENDORS].filter((v) => v.city === city)
         .filter((v) => !service || v.services.includes(service))
         .filter((v) => !q || [v.name, v.area, ...v.services, ...v.services.map(serviceLabel)].join(' ').toLowerCase().includes(q.toLowerCase()))
         .sort((a, b) => Number(b.pro) - Number(a.pro) || b.rating - a.rating),
     // t: serviceLabel depends on the language, so the search follows it too.
-    [city, service, q, t],
+    [accountVendors, city, service, q, t],
   );
 
   return (

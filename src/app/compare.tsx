@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { VendorAvatar } from '../components/VendorCard';
 import { Badge, Button, Card, Chip, EmptyState, Row, Screen, T } from '../components/ui';
-import { cityLabel, designName, reasonLabel, responseLabel, useT } from '../i18n';
+import { cityLabel, designName, ratingLabel, reasonLabel, responseLabel, useT } from '../i18n';
 import { matchVendors } from '../lib/matching';
 import { pkr, pkrShort } from '../lib/format';
 import { useApp } from '../store/useApp';
@@ -65,7 +65,7 @@ export default function Compare() {
                 <T variant="small" numberOfLines={1} style={[styles.td, { flex: 1.6, color: colors.text, fontFamily: fonts.semibold }]}>{q.vendor.name}</T>
                 <T variant="small" style={[styles.td, cheapest && styles.win]}>{pkrShort(q.price).replace('PKR ', '')}</T>
                 <T variant="small" style={[styles.td, fastest && styles.win]}>{q.days}</T>
-                <T variant="small" style={[styles.td, { flex: 0.7 }]}>{q.vendor.rating.toFixed(1)}</T>
+                <T variant="small" style={[styles.td, { flex: 0.7 }]}>{ratingLabel(q.vendor)}</T>
               </Row>
             );
           })}
@@ -95,7 +95,7 @@ export default function Compare() {
               <T variant="h3" numberOfLines={1}>{q.vendor.name}</T>
               <Row gap={4}>
                 <Ionicons name="star" size={13} color={colors.amber} />
-                <T variant="small">{t('compare.ratingJobs', { rating: q.vendor.rating.toFixed(1), reviews: q.vendor.reviewCount, jobs: q.vendor.jobsCompleted })}</T>
+                <T variant="small">{t('compare.ratingJobs', { rating: ratingLabel(q.vendor), reviews: q.vendor.reviewCount, jobs: q.vendor.jobsCompleted })}</T>
               </Row>
             </View>
           </Row>

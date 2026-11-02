@@ -3,12 +3,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Avatar } from '../../components/Avatar';
 import { DesignThumb } from '../../components/DesignPreview';
 import { RoomIllustration } from '../../components/RoomIllustration';
 import { Badge, Button, Card, IconTile, Row, Section, T, tap } from '../../components/ui';
 import { config } from '../../config';
 import { PALETTES, ROOM_TYPES, STYLES } from '../../data/catalog';
-import { cityLabel, designName, projectTitle, roomLabel, styleBlurb, styleLabel, useT, type TKey } from '../../i18n';
+import { budgetLabel, cityLabel, designName, projectTitle, roomLabel, styleBlurb, styleLabel, useT, type TKey } from '../../i18n';
 import { pkr } from '../../lib/format';
 import { useApp } from '../../store/useApp';
 import { colors, fonts, radius, spacing } from '../../theme';
@@ -35,6 +36,11 @@ export default function Home() {
   const { user, designs, projects, resetDraft, updateDraft, referralUsed } = useApp();
   const active = projects.find((p) => p.status === 'active');
 
+  const firstName = user?.name?.split(' ')[0] ?? t('home.there');
+  const favouriteIds = user?.preferredStyles ?? [];
+  const favourites = STYLES.filter((s) => favouriteIds.includes(s.id));
+  const orderedStyles = [...favourites, ...STYLES.filter((s) => !favouriteIds.includes(s.id))];
+
   const startDesign = (preset?: { roomTypeId?: string; area?: number; styleId?: string; paletteId?: string }) => {
     resetDraft();
     if (preset) updateDraft(preset);
@@ -45,10 +51,13 @@ export default function Home() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xxxl }} showsVerticalScrollIndicator={false}>
       <View style={{ paddingHorizontal: spacing.lg }}>
         <Row style={{ justifyContent: 'space-between' }}>
-          <View>
-            <T variant="small">{t('home.greeting')}</T>
-            <T variant="h1">{user?.name?.split(' ')[0] ?? t('home.there')} 👋</T>
-          </View>
+          <Pressable onPress={() => router.push('/(tabs)/profile')} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 1 }}>
+            <Avatar uri={user?.avatarUri} name={user?.name ?? 'R'} size={48} round />
+            <View style={{ flexShrink: 1 }}>
+              <T variant="small">{t('home.greeting')}</T>
+              <T variant="h1" numberOfLines={1}>{user?.name?.split(' ')[0] ?? t('home.there')} 👋</T>
+            </View>
+          </Pressable>
           <Pressable onPress={() => router.push('/(tabs)/profile')} style={styles.cityPill}>
             <Ionicons name="location" size={14} color={colors.tealDark} />
             <T variant="small" style={{ color: colors.navy, fontFamily: fonts.semibold }}>{cityLabel(user?.city ?? 'Sukkur')}</T>
@@ -130,14 +139,49 @@ export default function Home() {
         </>
       )}
 
+      {/* Personalised: favourite styles from the profile, or a nudge to pick some. */}
+      <View style={{ paddingHorizontal: spacing.lg }}>
+        {favourites.length > 0 ? (
+          <Section title={t('home.pickedFor', { name: firstName })} action={t('common.edit')} onAction={() => router.push('/profile-edit')}>
+            <Card style={{ backgroundColor: colors.tealMist }}>
+              <T variant="small" style={{ color: colors.text }}>
+                {user?.budget ? t('home.pickedBodyBudget', { budget: budgetLabel(user.budget) }) : t('home.pickedBody')}
+              </T>
+              <Row style={{ flexWrap: 'wrap', marginTop: spacing.md }} gap={spacing.sm}>
+                {favourites.map((s) => (
+                  <Button key={s.id} title={styleLabel(s.id)} kind="secondary" icon="sparkles" small onPress={() => startDesign({ styleId: s.id })} />
+                ))}
+              </Row>
+            </Card>
+          </Section>
+        ) : (
+          <Card style={{ marginTop: spacing.xxl, backgroundColor: colors.tealMist }} onPress={() => router.push('/profile-edit')}>
+            <Row>
+              <IconTile icon="heart-outline" bg={colors.white} />
+              <View style={{ flex: 1 }}>
+                <T variant="bodyStrong">{t('home.personaliseTitle')}</T>
+                <T variant="small">{t('home.personaliseBody')}</T>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
+            </Row>
+          </Card>
+        )}
+      </View>
+
       <Section title={t('home.exploreStyles')} style={{ paddingHorizontal: spacing.lg }}>
         <View style={styles.grid}>
-          {STYLES.map((s, i) => {
-            const pal = PALETTES[(i * 3 + 1) % PALETTES.length];
+          {orderedStyles.map((s) => {
+            const pal = PALETTES[(STYLES.indexOf(s) * 3 + 1) % PALETTES.length];
+            const fav = favouriteIds.includes(s.id);
             return (
-              <Pressable key={s.id} onPress={() => { tap(); startDesign({ styleId: s.id, paletteId: pal.id }); }} style={styles.styleCard}>
+              <Pressable key={s.id} onPress={() => { tap(); startDesign({ styleId: s.id, paletteId: pal.id }); }} style={[styles.styleCard, fav && { borderColor: colors.teal, borderWidth: 1.5 }]}>
                 <View style={{ height: 96 }}>
                   <RoomIllustration styleId={s.id} paletteId={pal.id} flooringId={s.id === 'luxury' ? 'marble' : s.id === 'scandinavian' ? 'laminate' : 'porcelain'} ceilingId={s.id === 'luxury' ? 'cove' : 'gypsum'} />
+                  {fav && (
+                    <View style={styles.favTag}>
+                      <Ionicons name="heart" size={12} color={colors.white} />
+                    </View>
+                  )}
                 </View>
                 <View style={{ padding: spacing.md }}>
                   <T variant="bodyStrong">{styleLabel(s.id)}</T>
@@ -191,4 +235,5 @@ const styles = StyleSheet.create({
   roomTile: { width: 104, paddingVertical: spacing.lg, alignItems: 'center', backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   styleCard: { width: '47.5%', flexGrow: 1, backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
+  favTag: { position: 'absolute', right: 8, top: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' },
 });

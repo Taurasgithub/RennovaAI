@@ -17,7 +17,17 @@ export type Profile = {
   city: string;
   status: AccountStatus;
   created_at: string;
+  // Personal profile (0002_profiles.sql)
+  avatar_url: string | null;
+  bio: string;
+  area: string;
+  preferred_styles: string[];
+  budget_range: BudgetRange | null;
+  job_title: string;
 };
+
+export type BudgetRange = 'lt100k' | '100k_300k' | '300k_500k' | 'gt500k';
+export const BUDGET_RANGES: BudgetRange[] = ['lt100k', '100k_300k', '300k_500k', 'gt500k'];
 
 /** Row of public.vendor_profiles. */
 export type VendorProfile = {
@@ -34,6 +44,13 @@ export type VendorProfile = {
   review_note: string | null;
   submitted_at: string;
   reviewed_at: string | null;
+  // Public business profile (0002_profiles.sql)
+  logo_url: string | null;
+  cover_url: string | null;
+  service_areas: string[];
+  working_hours: string;
+  whatsapp: string;
+  portfolio_urls: string[];
 };
 
 /** Accounts are on when the Supabase URL and publishable key are set in .env; otherwise the app runs on-device only. */

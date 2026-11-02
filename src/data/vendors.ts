@@ -1,4 +1,5 @@
 import type { ServiceType } from './catalog';
+import { useMarketplace } from './marketplace';
 
 // SAMPLE LISTINGS for the beta build. Replace with the vendor API once vendors
 // are onboarded and verified (see README → "Going live").
@@ -26,6 +27,15 @@ export type Vendor = {
   about: string;
   portfolio: PortfolioItem[];
   reviews: Review[];
+  /** Set for real vendor accounts (see data/marketplace.ts); absent on the sample listings. */
+  account?: {
+    logoUrl: string | null;
+    coverUrl: string | null;
+    photos: string[];
+    serviceAreas: string[];
+    workingHours: string;
+    whatsapp: string;
+  };
 };
 
 export const VENDORS: Vendor[] = [
@@ -168,4 +178,7 @@ export const VENDORS: Vendor[] = [
   },
 ];
 
-export const getVendor = (id: string | undefined) => VENDORS.find((v) => v.id === id);
+/** Real (approved) vendor accounts first, then the sample listings. */
+export const allVendors = (): Vendor[] => [...useMarketplace.getState().accountVendors, ...VENDORS];
+
+export const getVendor = (id: string | undefined) => allVendors().find((v) => v.id === id);

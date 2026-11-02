@@ -2,16 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Badge, Button, Card, Chip, Field, IconTile, Row, Screen, Section, T, tap, type IconName } from '../../components/ui';
+import { Badge, Button, Card, Chip, IconTile, Row, Screen, Section, T, tap, type IconName } from '../../components/ui';
 import { config } from '../../config';
 import { useAuth } from '../../auth/AuthProvider';
 import { AccountPanel } from '../../components/AccountPanel';
-import { cityLabel, useT } from '../../i18n';
+import { ProfileHeader } from '../../components/ProfileHeader';
+import { budgetLabel, cityLabel, styleLabel, useT } from '../../i18n';
 import { aiServerConfigured } from '../../services/ai';
 import { useApp } from '../../store/useApp';
-import { colors, fonts, spacing } from '../../theme';
+import { colors, spacing } from '../../theme';
 
 function Item({ icon, label, detail, onPress }: { icon: IconName; label: string; detail?: string; onPress: () => void }) {
   return (
@@ -31,20 +31,12 @@ export default function Profile() {
   const { t } = useT();
   const auth = useAuth();
   const { user, setUser, designs, projects, vendorApplication, resetAll, language, setLanguage } = useApp();
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(user?.name ?? '');
-  const [phone, setPhone] = useState(user?.phone ?? '');
 
-  // With accounts on, profile edits are saved to the account (which also updates the local copy).
-  const saveUser = (u: { name: string; phone: string; city: string }) => {
-    if (auth.enabled) auth.updateProfile({ full_name: u.name, phone: u.phone, city: u.city });
-    else setUser(u);
-  };
-
-  const save = () => {
+  // With accounts on, the city is saved to the account (which also updates the local copy).
+  const setCity = (city: string) => {
     if (!user) return;
-    saveUser({ ...user, name: name.trim() || user.name, phone: phone.trim() });
-    setEditing(false);
+    if (auth.enabled) auth.updateProfile({ city });
+    else setUser({ ...user, city });
   };
 
   const reset = () => {
@@ -56,32 +48,42 @@ export default function Profile() {
     else Alert.alert(t('profile.deleteTitle'), t('profile.deleteBody'), [{ text: t('common.cancel'), style: 'cancel' }, { text: t('common.delete'), style: 'destructive', onPress: go }]);
   };
 
-  const initials = (user?.name ?? 'R').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  const prefs = user?.preferredStyles ?? [];
 
   return (
     <Screen back={false} title={t('profile.title')}>
-      <Card style={{ marginTop: spacing.sm }}>
-        <Row gap={spacing.md}>
-          <View style={styles.avatar}><T style={{ color: colors.white, fontFamily: fonts.bold, fontSize: 22 }}>{initials}</T></View>
-          <View style={{ flex: 1 }}>
-            <T variant="h2">{user?.name}</T>
-            <T variant="small">{user?.phone || t('profile.noPhone')} · {cityLabel(user?.city ?? '')}</T>
-          </View>
-          <Button title={editing ? t('common.cancel') : t('common.edit')} kind="secondary" small onPress={() => setEditing(!editing)} />
-        </Row>
-        {editing && (
-          <>
-            <Field label={t('profile.name')} value={name} onChangeText={setName} autoCapitalize="words" />
-            <Field label={t('profile.mobile')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="03XX XXXXXXX" />
-            <Button title={t('common.save')} onPress={save} style={{ marginTop: spacing.lg }} />
-          </>
-        )}
-        <Row style={{ marginTop: spacing.lg }} gap={spacing.sm}>
-          <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{designs.length}</T><T variant="caption">{t('profile.statDesigns')}</T></View>
-          <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{projects.length}</T><T variant="caption">{t('profile.statProjects')}</T></View>
-          <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{designs.filter((d) => d.premium).length}</T><T variant="caption">{t('profile.statPremium')}</T></View>
-        </Row>
-      </Card>
+      <ProfileHeader
+        name={user?.name || t('home.there')}
+        avatarUri={user?.avatarUri}
+        roleLabel={t('role.customer').toUpperCase()}
+        roleTone="teal"
+        lines={[[user?.area, cityLabel(user?.city ?? '')].filter(Boolean).join(', '), user?.phone || t('profile.noPhone')]}
+        bio={user?.bio}
+        editLabel={t('edit.title')}
+        onEdit={() => router.push('/profile-edit')}
+        extra={
+          <Row style={{ marginTop: spacing.lg }} gap={spacing.sm}>
+            <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{designs.length}</T><T variant="caption">{t('profile.statDesigns')}</T></View>
+            <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{projects.length}</T><T variant="caption">{t('profile.statProjects')}</T></View>
+            <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{designs.filter((d) => d.premium).length}</T><T variant="caption">{t('profile.statPremium')}</T></View>
+          </Row>
+        }
+      />
+
+      <Section title={t('profile.preferences')} action={t('common.edit')} onAction={() => router.push('/profile-edit')}>
+        <Card>
+          <T variant="caption">{t('edit.styles')}</T>
+          {prefs.length ? (
+            <Row style={{ flexWrap: 'wrap', marginTop: 6 }} gap={6}>
+              {prefs.map((s) => <Badge key={s} label={styleLabel(s).toUpperCase()} tone="teal" icon="color-palette-outline" />)}
+            </Row>
+          ) : (
+            <T variant="small" style={{ marginTop: 4 }}>{t('profile.noStyles')}</T>
+          )}
+          <T variant="caption" style={{ marginTop: spacing.md }}>{t('edit.budget')}</T>
+          <T variant="bodyStrong" style={{ marginTop: 2 }}>{user?.budget ? budgetLabel(user.budget) : t('profile.noBudget')}</T>
+        </Card>
+      </Section>
 
       <Section title={t('lang.title')}>
         <Row style={{ flexWrap: 'wrap' }} gap={6}>
@@ -92,7 +94,7 @@ export default function Profile() {
 
       <Section title={t('profile.city')}>
         <Row style={{ flexWrap: 'wrap' }} gap={6}>
-          {config.cities.map((c) => <Chip key={c} label={cityLabel(c)} icon="location-outline" selected={user?.city === c} onPress={() => user && saveUser({ ...user, city: c })} />)}
+          {config.cities.map((c) => <Chip key={c} label={cityLabel(c)} icon="location-outline" selected={user?.city === c} onPress={() => setCity(c)} />)}
         </Row>
       </Section>
 
@@ -140,7 +142,6 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
-  avatar: { width: 58, height: 58, borderRadius: 18, backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' },
   stat: { flex: 1, alignItems: 'center', backgroundColor: colors.tealMist, borderRadius: 12, paddingVertical: spacing.md },
   item: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
 });

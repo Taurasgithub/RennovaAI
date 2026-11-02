@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useAdminData } from '../../admin/useAdminData';
 import { ROLE_LABEL, ROLE_TONE } from '../../components/AccountPanel';
+import { Avatar } from '../../components/Avatar';
 import { Badge, Button, Card, Chip, EmptyState, Row, Screen, T, tap } from '../../components/ui';
-import { cityLabel, useT, type TKey } from '../../i18n';
+import { budgetLabel, cityLabel, styleLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
 import type { Profile, Role } from '../../lib/supabase';
 import { colors, fonts, radius, spacing } from '../../theme';
@@ -59,6 +61,7 @@ export default function AdminUsers() {
 
 function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolean; open: boolean; onToggle: () => void; data: ReturnType<typeof useAdminData> }) {
   const { t } = useT();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const isMe = p.id === data.me?.id;
   const act = async (fn: () => Promise<boolean>) => {
@@ -78,6 +81,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
         accessibilityState={{ expanded: open }}
       >
         <Row>
+          <Avatar uri={p.avatar_url} name={p.full_name || p.email} size={40} round bg={p.role === 'admin' ? colors.navy : p.role === 'vendor' ? colors.amberDark : colors.teal} />
           <View style={{ flex: 1 }}>
             <T variant="bodyStrong" numberOfLines={1}>{p.full_name || t('admin.noName')}{isMe ? ` · ${t('admin.you')}` : ''}</T>
             <T variant="caption" numberOfLines={1}>{p.email}{p.phone ? ` · ${p.phone}` : ''}</T>
@@ -91,6 +95,26 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
       {open && (
         <View style={styles.panel}>
           <T variant="caption">{t('admin.joined', { date: dateLabel(p.created_at), city: cityLabel(p.city) })}</T>
+          {/* Personal profile */}
+          {!!p.job_title && <T variant="small" style={{ marginTop: spacing.sm, color: colors.text }}>{p.job_title}</T>}
+          {!!p.bio && <T variant="small" style={{ marginTop: spacing.sm, color: colors.text }}>{p.bio}</T>}
+          {p.role === 'customer' && (
+            <View style={{ marginTop: spacing.sm, gap: 4 }}>
+              {!!p.area && <T variant="caption">{t('edit.area')}: {p.area}</T>}
+              <T variant="caption">{t('edit.styles')}: {p.preferred_styles.length ? p.preferred_styles.map(styleLabel).join(', ') : t('edit.notSet')}</T>
+              <T variant="caption">{t('edit.budget')}: {p.budget_range ? budgetLabel(p.budget_range) : t('edit.notSet')}</T>
+            </View>
+          )}
+          {p.role === 'vendor' && data.vendors.some((v) => v.user_id === p.id) && (
+            <Button
+              title={t('admin.viewBusiness')}
+              kind="ghost"
+              small
+              iconRight="chevron-forward"
+              style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginTop: 4 }}
+              onPress={() => router.push({ pathname: '/vendor/[id]', params: { id: p.id, preview: '1' } })}
+            />
+          )}
           {isMe ? (
             <T variant="small" style={{ marginTop: spacing.sm }}>{t('admin.selfNote')}</T>
           ) : (

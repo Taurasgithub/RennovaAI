@@ -21,7 +21,9 @@ Until `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are 
 3. Restart Expo (`npx expo start`) so the new values are bundled.
 
 ## 2. Create the tables and security rules
-**SQL Editor → New query**, paste the whole of [`migrations/0001_accounts.sql`](migrations/0001_accounts.sql), run it once.
+In **SQL Editor → New query**, run each file once, in order:
+1. [`migrations/0001_accounts.sql`](migrations/0001_accounts.sql): accounts, roles, vendor applications.
+2. [`migrations/0002_profiles.sql`](migrations/0002_profiles.sql): personalised profiles (photo, bio, customer preferences, admin job title, vendor business profile) and the `avatars` / `vendor-media` photo buckets. Users can only upload into their own folder.
 
 ## 3. Auth settings
 **Authentication → URL Configuration**

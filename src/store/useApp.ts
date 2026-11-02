@@ -2,10 +2,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { DesignChoices, Estimate } from '../lib/estimate';
+import type { BudgetRange } from '../lib/supabase';
 import { uid } from '../lib/id';
 import type { ServiceType } from '../data/catalog';
 
-export type User = { name: string; phone: string; city: string };
+/** The signed-in person's profile as the customer screens see it (mirrors public.profiles when accounts are on). */
+export type User = {
+  name: string;
+  phone: string;
+  city: string;
+  avatarUri?: string | null;
+  bio?: string;
+  area?: string;
+  preferredStyles?: string[];
+  budget?: BudgetRange | null;
+};
 
 export type Language = 'en' | 'ur';
 

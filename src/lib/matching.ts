@@ -1,5 +1,5 @@
 import type { ServiceType } from '../data/catalog';
-import { VENDORS, type Vendor } from '../data/vendors';
+import { allVendors, type Vendor } from '../data/vendors';
 import type { Estimate } from './estimate';
 import { roundTo } from './format';
 
@@ -26,7 +26,7 @@ export type Quote = {
  * of 3–5 quotes (per the RennovaAI operations plan).
  */
 export function matchVendors(estimate: Estimate, city: string, budget?: number, limit = 5): Quote[] {
-  const pool = VENDORS.filter((v) => v.city === city && v.verified);
+  const pool = allVendors().filter((v) => v.city === city && v.verified);
   const needed = estimate.services;
 
   const quotes = pool
@@ -37,7 +37,7 @@ export function matchVendors(estimate: Estimate, city: string, budget?: number, 
       const days = Math.max(2, Math.round(estimate.days * v.speedFactor));
       const reasons: MatchReason[] = [];
 
-      let score = v.rating * 12; // up to 60
+      let score = (v.reviewCount ? v.rating : 4) * 12; // up to 60; unrated new vendors get a neutral 4.0
       score += coverage * 25;
       if (coverage === 1) reasons.push({ kind: 'all' });
       else if (covered.length) {
