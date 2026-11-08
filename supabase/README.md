@@ -80,13 +80,25 @@ Notes:
 - Users may choose *Hide my email*. Their account email is then an `@privaterelay.appleid.com` address. To email them, register your sending domain under *Services → Sign in with Apple for Email Communication*.
 - Until a provider is enabled in Supabase, its button shows *"This sign-in option is not set up yet."*
 
-## 6. Make yourself an admin
-Sign up in the app with your own email (as a customer), then run in the SQL Editor:
+## 6. The shared admin account
+The team signs in to the admin panel with one shared login, `admin@rennova.com`, not a personal Gmail.
+
+1. **Authentication → Users → Add user → Create new user**: email `admin@rennova.com`, a strong password, tick **Auto Confirm User**. The address is not a real inbox, so *Forgot password* cannot reach it. Share the password with the team privately (e.g. a password manager). To change it later, run in the SQL Editor:
+   ```sql
+   update auth.users set encrypted_password = extensions.crypt('NEW-PASSWORD', extensions.gen_salt('bf'))
+   where email = 'admin@rennova.com';
+   ```
+2. In the **SQL Editor**:
+   ```sql
+   update public.profiles set role = 'admin', full_name = 'RennovaAI Admin'
+   where email = 'admin@rennova.com';
+   ```
+3. In the app: Welcome → *Already have an account? Sign in* → enter the admin email and password. You land in the admin panel.
+
+Promote other admins from **Admin → Users**. To demote someone:
 ```sql
-update public.profiles set role = 'admin'
-where email = 'you@example.com';
+update public.profiles set role = 'customer' where email = 'someone@example.com';
 ```
-Sign out and back in — you land in the admin panel. Promote other admins from **Admin → Users**.
 
 ## What is stored where (this version)
 - **Supabase**: accounts (email, Google, Apple), roles, suspended status, personal profiles and photos, vendor applications, verification/approval and vendor business profiles.
