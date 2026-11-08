@@ -342,10 +342,14 @@ export default function Onboarding() {
     if (!auth.enabled || !profile) return;
     if (profile.full_name) router.replace('/');
     else {
+      // Google gives the name as full_name/name; native Apple sign-in saves full_name (first sign-in only).
+      const meta = auth.session?.user.user_metadata ?? {};
+      const providerName = String(meta.full_name ?? meta.name ?? '').trim();
+      setName((n) => n || providerName);
       setPhone((p) => p || profile.phone);
       setStep(PROFILE);
     }
-  }, [auth.enabled, profile, router]);
+  }, [auth.enabled, auth.session, profile, router]);
 
   const finish = async () => {
     if (auth.enabled) {

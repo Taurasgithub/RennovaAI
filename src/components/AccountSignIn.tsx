@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { AUTH_ERRORS, signInWithEmail, signInWithProvider, signUpWithEmail, sendPasswordReset } from '../auth/actions';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { AUTH_ERRORS, signInWithApple, signInWithEmail, signInWithProvider, signUpWithEmail, sendPasswordReset } from '../auth/actions';
 import { useAuth } from '../auth/AuthProvider';
 import { config } from '../config';
 import { useT, type TKey } from '../i18n';
@@ -26,6 +27,11 @@ export function AccountSignIn() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(notice === 'suspended' ? t('auth.suspended') : '');
   const [info, setInfo] = useState('');
+  // Native Sign in with Apple exists only on iOS (13+); elsewhere the button uses the web flow.
+  const [nativeApple, setNativeApple] = useState(false);
+  useEffect(() => {
+    if (Platform.OS === 'ios') AppleAuthentication.isAvailableAsync().then(setNativeApple).catch(() => setNativeApple(false));
+  }, []);
 
   const reset = () => {
     setError('');
@@ -90,7 +96,18 @@ export function AccountSignIn() {
       <View style={{ gap: spacing.sm, marginTop: spacing.lg }}>
         <SocialButton label={t('auth.google')} icon={<GoogleMark />} disabled={busy} onPress={() => run(() => signInWithProvider('google', type))} />
         {/* Apple sign-in is required on iOS when Google is offered; on Android/web it is optional but harmless. */}
-        <SocialButton label={t('auth.apple')} icon={<Ionicons name="logo-apple" size={22} color="#000" />} disabled={busy} onPress={() => run(() => signInWithProvider('apple', type))} />
+        {nativeApple ? (
+          // Apple's own button on iOS (App Store guideline 4.8); it is labelled in the device's language.
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE_OUTLINE}
+            cornerRadius={14}
+            style={{ width: '100%', height: 50 }}
+            onPress={() => !busy && run(() => signInWithApple(type))}
+          />
+        ) : (
+          <SocialButton label={t('auth.apple')} icon={<Ionicons name="logo-apple" size={22} color="#000" />} disabled={busy} onPress={() => run(() => signInWithApple(type))} />
+        )}
       </View>
 
       <OrDivider label={t('auth.or')} />

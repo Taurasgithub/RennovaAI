@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
@@ -12,7 +14,7 @@ export const AUTH_ERRORS = ['network', 'invalid_credentials', 'user_already_exis
 
 function fail(error: { message: string; code?: string; status?: number }): AuthResult {
   if (error.status === 0 || /failed to fetch|network request failed|load failed/i.test(error.message)) return { error: 'network' };
-  if (/provider is not enabled|unsupported provider/i.test(error.message)) return { error: 'provider_disabled' };
+  if (/provider is not enabled|unsupported provider|unacceptable audience|invalid audience/i.test(error.message)) return { error: 'provider_disabled' };
   if (error.code && (AUTH_ERRORS as readonly string[]).includes(error.code)) return { error: error.code };
   return { error: error.message };
 }
@@ -41,6 +43,37 @@ export async function signUpWithEmail(email: string, password: string, role: Exc
 export async function sendPasswordReset(email: string): Promise<AuthResult> {
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectUrl() });
   return error ? fail(error) : {};
+}
+
+/**
+ * Apple: the native Sign in with Apple sheet on iOS (identity token → Supabase), the web OAuth flow
+ * elsewhere (Apple has no native sign-in on Android or web).
+ */
+export async function signInWithApple(role: Exclude<Role, 'admin'>): Promise<AuthResult> {
+  if (Platform.OS === 'ios' && (await AppleAuthentication.isAvailableAsync())) {
+    await AsyncStorage.setItem(PENDING_ROLE_KEY, role);
+    // Apple gets the SHA-256 of a random nonce; Supabase gets the raw value and checks they match (blocks token replay).
+    const rawNonce = Crypto.randomUUID();
+    const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+    let credential: AppleAuthentication.AppleAuthenticationCredential;
+    try {
+      credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
+        nonce: hashedNonce,
+      });
+    } catch (e) {
+      if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') return {};
+      return { error: e instanceof Error ? e.message : 'Apple sign-in failed.' };
+    }
+    if (!credential.identityToken) return { error: 'Apple did not return a sign-in token.' };
+    const { error } = await supabase.auth.signInWithIdToken({ provider: 'apple', token: credential.identityToken, nonce: rawNonce });
+    if (error) return fail(error);
+    // Apple shares the name only on the very first sign-in; keep it so the profile step can pre-fill it.
+    const fullName = [credential.fullName?.givenName, credential.fullName?.familyName].filter(Boolean).join(' ');
+    if (fullName) await supabase.auth.updateUser({ data: { full_name: fullName } });
+    return {};
+  }
+  return signInWithProvider('apple', role);
 }
 
 /** Google / Apple via Supabase OAuth (PKCE). The provider must be enabled in the Supabase dashboard. */

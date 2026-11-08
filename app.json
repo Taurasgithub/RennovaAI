@@ -12,7 +12,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rennovaai.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.rennovaai.app",
@@ -58,7 +59,8 @@
         }
       ],
       "expo-sqlite",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-apple-authentication"
     ],
     "backgroundColor": "#F7F9FB"
   }
