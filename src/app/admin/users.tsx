@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useAdminData } from '../../admin/useAdminData';
-import { ROLE_LABEL, ROLE_TONE } from '../../components/AccountPanel';
-import { Avatar } from '../../components/Avatar';
-import { Badge, Button, Card, Chip, EmptyState, Row, Screen, T, tap } from '../../components/ui';
+import { ROLE_LABEL } from '../../components/AccountPanel';
+import { AdminTitle, HouseAvatar, ROLE_COLOR, Swatch, TabStrip } from '../../components/brand';
+import { Button, Card, Chip, EmptyState, Row, Screen, T, tap } from '../../components/ui';
 import { budgetLabel, cityLabel, styleLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
 import type { Profile, Role } from '../../lib/supabase';
-import { colors, fonts, radius, spacing } from '../../theme';
+import { colors, fonts, spacing } from '../../theme';
 
 type Filter = Role | 'suspended' | 'all';
 const FILTERS: { id: Filter; label: TKey }[] = [
@@ -34,15 +34,15 @@ export default function AdminUsers() {
     .filter((p) => !query || `${p.full_name} ${p.email} ${p.phone}`.toLowerCase().includes(query));
 
   return (
-    <Screen back={false} title={t('admin.usersTitle')} subtitle={t('admin.usersSubtitle', { n: data.profiles.length })}>
+    <Screen back={false} bg={colors.mist}>
+      <AdminTitle kicker={t('role.admin')} title={t('admin.usersTitle')} sub={t('admin.usersSubtitle', { n: data.profiles.length })} />
       <View style={styles.search}>
         <Ionicons name="search" size={18} color={colors.textSubtle} />
         <TextInput value={q} onChangeText={setQ} placeholder={t('admin.searchUsers')} placeholderTextColor={colors.textSubtle} style={styles.searchInput} autoCapitalize="none" />
       </View>
-      <Row style={{ flexWrap: 'wrap', marginTop: spacing.md }} gap={6}>
-        {FILTERS.map((f) => <Chip key={f.id} label={t(f.label)} selected={filter === f.id} onPress={() => setFilter(f.id)} />)}
-      </Row>
-      {!!data.error && <T variant="small" style={{ color: colors.danger, marginTop: spacing.sm }}>{data.error}</T>}
+      <RoleMix profiles={data.profiles} />
+      <TabStrip items={FILTERS.map((f) => ({ id: f.id, label: t(f.label) }))} value={filter} onChange={setFilter} />
+      {!!data.error && <T variant="small" style={{ color: colors.alert, marginTop: spacing.sm }}>{data.error}</T>}
 
       {data.loading ? (
         <ActivityIndicator color={colors.teal} style={{ marginTop: spacing.xxl }} />
@@ -71,7 +71,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
   };
 
   return (
-    <View style={[{ paddingVertical: spacing.md }, !first && styles.divider]}>
+    <View style={[{ paddingVertical: spacing.md }, !first && styles.divider, p.status === 'suspended' && styles.suspended]}>
       <Pressable
         onPress={() => {
           tap();
@@ -81,13 +81,14 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
         accessibilityState={{ expanded: open }}
       >
         <Row>
-          <Avatar uri={p.avatar_url} name={p.full_name || p.email} size={40} round bg={p.role === 'admin' ? colors.navy : p.role === 'vendor' ? colors.amberDark : colors.teal} />
+          <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={40} bg={ROLE_COLOR[p.role]} color={p.role === 'vendor' ? colors.navy : colors.white} />
           <View style={{ flex: 1 }}>
-            <T variant="bodyStrong" numberOfLines={1}>{p.full_name || t('admin.noName')}{isMe ? ` · ${t('admin.you')}` : ''}</T>
+            <T variant="bodyStrong" numberOfLines={1} style={{ color: p.status === 'suspended' ? colors.textMuted : colors.navy, fontFamily: fonts.extrabold }}>{p.full_name || t('admin.noName')}{isMe ? ` · ${t('admin.you')}` : ''}</T>
             <T variant="caption" numberOfLines={1}>{p.email}{p.phone ? ` · ${p.phone}` : ''}</T>
+            <View style={{ marginTop: 4 }}>
+              <Swatch color={ROLE_COLOR[p.role]} label={t(ROLE_LABEL[p.role]) + (p.status === 'suspended' ? ` · ${t('admin.suspended')}` : '')} textColor={p.status === 'suspended' ? colors.alert : colors.navy} />
+            </View>
           </View>
-          {p.status === 'suspended' && <Badge label={t('admin.suspended')} tone="gray" icon="ban" />}
-          <Badge label={t(ROLE_LABEL[p.role]).toUpperCase()} tone={ROLE_TONE[p.role]} />
           <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSubtle} />
         </Row>
       </Pressable>
@@ -142,9 +143,29 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
   );
 }
 
+/** Share of customers / vendors / admins as one flat stacked bar. */
+function RoleMix({ profiles }: { profiles: Profile[] }) {
+  const { t } = useT();
+  const total = Math.max(profiles.length, 1);
+  const parts = ROLES.map((r) => ({ r, n: profiles.filter((p) => p.role === r).length })).filter((x) => x.n > 0);
+  if (!profiles.length) return null;
+  return (
+    <View>
+      <View style={styles.mixBar}>
+        {parts.map((x) => <View key={x.r} style={{ flex: x.n, backgroundColor: ROLE_COLOR[x.r] }} />)}
+      </View>
+      <Row style={{ flexWrap: 'wrap', marginTop: spacing.sm }} gap={spacing.lg}>
+        {parts.map((x) => <Swatch key={x.r} color={ROLE_COLOR[x.r]} label={`${t(ROLE_LABEL[x.r])} ${Math.round((x.n / total) * 100)}%`} />)}
+      </Row>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 48, borderRadius: radius.md, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, marginTop: spacing.sm },
+  search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 48, borderRadius: 12, backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: spacing.md, marginTop: spacing.lg },
   searchInput: { flex: 1, height: '100%', fontFamily: fonts.medium, fontSize: 14.5, color: colors.text },
-  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-  panel: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.bg },
+  divider: { borderTopWidth: 1, borderColor: colors.line },
+  suspended: { borderLeftWidth: 4, borderLeftColor: colors.alert, paddingLeft: spacing.sm, marginLeft: -spacing.lg + 4 },
+  mixBar: { flexDirection: 'row', height: 12, gap: 2, marginTop: spacing.lg },
+  panel: { marginTop: spacing.md, padding: spacing.md, borderRadius: 12, backgroundColor: colors.mist },
 });

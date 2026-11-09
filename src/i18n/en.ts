@@ -43,6 +43,7 @@ export const en = {
   'tabs.vendors': 'Vendors',
   'tabs.projects': 'Projects',
   'tabs.profile': 'Profile',
+  'tabs.newDesign': 'Design',
 
   // Catalog — rooms
   'room.living': 'Living room',

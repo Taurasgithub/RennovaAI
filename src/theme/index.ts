@@ -26,6 +26,16 @@ export const colors = {
   textMuted: '#5B6B82',
   textSubtle: '#8A97AB',
 
+  // Signed-in app (logo-derived, flat): tints of the three logo colours + neutrals.
+  tealTint: '#E3F5F1',
+  amberTint: '#FFF3DD',
+  navy2: '#163C73',
+  navyMuted: '#A9B8D0',
+  mist: '#F4F7F7',
+  line: '#E2E8EE',
+  alert: '#D64045',
+  alertTint: '#FCEBEC',
+
   success: '#16A34A',
   danger: '#DC2626',
   overlay: 'rgba(0, 39, 91, 0.55)',

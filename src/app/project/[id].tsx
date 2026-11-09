@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { HouseBar, Marker } from '../../components/brand';
 import { DesignCompare } from '../../components/DesignPreview';
 import { VendorAvatar } from '../../components/VendorCard';
 import { Badge, Button, Card, EmptyState, IconButton, Row, Screen, Section, Stars, T } from '../../components/ui';
@@ -63,9 +63,10 @@ export default function ProjectScreen() {
           <T variant="overline">{t('project.payments')}</T>
           <T variant="caption">{paymentLabel(project.paymentMethod)}</T>
         </Row>
-        <View style={styles.bar}>
-          <View style={{ width: `${(released / total) * 100}%`, backgroundColor: colors.teal }} />
-          <View style={{ width: `${(inEscrow / total) * 100}%`, backgroundColor: colors.amber }} />
+        <T style={styles.escrowValue}>{pkr(inEscrow)}</T>
+        <T variant="small">{t('project.inEscrow')}</T>
+        <View style={{ marginVertical: spacing.md }}>
+          <HouseBar steps={project.milestones.map((m) => (m.status === 'released' ? 'done' : m.status === 'in_escrow' ? 'now' : 'next'))} />
         </View>
         <Row style={{ justifyContent: 'space-between' }}>
           <View><T variant="caption">{t('project.released')}</T><T variant="bodyStrong" style={{ color: colors.tealDark }}>{pkr(released)}</T></View>
@@ -77,15 +78,13 @@ export default function ProjectScreen() {
       <Section title={t('project.milestones')}>
         {project.milestones.map((m, i) => {
           const prevDone = i === 0 || project.milestones[i - 1].status === 'released';
-          const icon = m.status === 'released' ? 'checkmark-circle' : m.status === 'in_escrow' ? 'lock-closed' : 'ellipse-outline';
-          const tint = m.status === 'released' ? colors.success : m.status === 'in_escrow' ? colors.amber : colors.textSubtle;
           return (
             <View key={m.id} style={{ flexDirection: 'row', gap: spacing.md }}>
               <View style={{ alignItems: 'center' }}>
-                <Ionicons name={icon} size={26} color={tint} />
-                {i < project.milestones.length - 1 && <View style={[styles.rail, m.status === 'released' && { backgroundColor: colors.success }]} />}
+                <Marker state={m.status === 'released' ? 'done' : m.status === 'in_escrow' || (m.status === 'awaiting_deposit' && prevDone) ? 'now' : 'next'} label={i + 1} size={28} />
+                {i < project.milestones.length - 1 && <View style={[styles.rail, m.status === 'released' && { backgroundColor: colors.teal }]} />}
               </View>
-              <Card style={{ flex: 1, marginBottom: spacing.md }}>
+              <Card style={[{ flex: 1, marginBottom: spacing.md }, m.status === 'in_escrow' && { backgroundColor: colors.amberTint, borderColor: colors.amberTint }]}>
                 <Row style={{ justifyContent: 'space-between' }}>
                   <T variant="bodyStrong" style={{ flex: 1 }}>{milestoneTitle(m)}</T>
                   <T variant="bodyStrong" style={{ color: colors.navy }}>{pkr(m.amount)}</T>
@@ -117,7 +116,7 @@ export default function ProjectScreen() {
       </Section>
 
       {project.status === 'completed' && (
-        <Card style={{ marginTop: spacing.sm, backgroundColor: project.rating ? colors.white : colors.amberSoft }}>
+        <Card style={{ marginTop: spacing.sm, backgroundColor: project.rating ? colors.white : colors.amberTint }}>
           {project.rating ? (
             <>
               <T variant="h3">{t('project.yourReview')}</T>
@@ -147,7 +146,7 @@ export default function ProjectScreen() {
 }
 
 const styles = StyleSheet.create({
-  bar: { height: 10, borderRadius: 5, backgroundColor: colors.border, flexDirection: 'row', overflow: 'hidden', marginVertical: spacing.md },
-  rail: { flex: 1, width: 2, backgroundColor: colors.border, marginVertical: 2 },
+  escrowValue: { fontFamily: fonts.extrabold, fontSize: 28, lineHeight: 34, color: colors.navy, letterSpacing: -0.6, marginTop: spacing.sm },
+  rail: { flex: 1, width: 2, backgroundColor: colors.line, marginVertical: 2 },
   review: { minHeight: 80, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: spacing.md, fontFamily: fonts.medium, color: colors.text, textAlignVertical: 'top' },
 });

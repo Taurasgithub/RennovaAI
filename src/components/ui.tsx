@@ -17,8 +17,9 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { useT } from '../i18n';
-import { colors, fonts, radius, shadow, spacing } from '../theme';
+import { colors, fonts, radius, spacing } from '../theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -39,7 +40,8 @@ const variantStyle: Record<Variant, TextStyle> = {
   bodyStrong: { fontFamily: fonts.semibold, fontSize: 14.5, lineHeight: 21, color: colors.text },
   small: { fontFamily: fonts.medium, fontSize: 12.5, lineHeight: 17, color: colors.textMuted },
   caption: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 15, color: colors.textSubtle },
-  overline: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, color: colors.amberDark, letterSpacing: 1.6, textTransform: 'uppercase' },
+  // Small label above a value: sentence case, no letter-spacing (flat, like the logo's tagline).
+  overline: { fontFamily: fonts.bold, fontSize: 12.5, lineHeight: 16, color: colors.textSubtle },
 };
 
 /* Urdu: text containing Arabic-script characters switches to Nastaliq, which needs much taller
@@ -165,7 +167,7 @@ export function IconButton({ icon, onPress, color = colors.navy, bg = colors.whi
         tap();
         onPress();
       }}
-      style={({ pressed }) => [{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 }, bg !== 'transparent' && shadow.card]}
+      style={({ pressed }) => [{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 }, bg === colors.white && { borderWidth: 1.5, borderColor: colors.line }]}
     >
       <Ionicons name={icon} size={size * 0.5} color={color} />
     </Pressable>
@@ -270,10 +272,10 @@ export function Section({ title, action, onAction, children, style }: { title: s
   return (
     <View style={[{ marginTop: spacing.xxl }, style]}>
       <View style={styles.sectionHead}>
-        <T variant="h2">{title}</T>
+        <T variant="h2" style={{ fontFamily: fonts.extrabold, fontSize: 18, letterSpacing: -0.3 }}>{title}</T>
         {action && (
           <Pressable onPress={onAction} hitSlop={8}>
-            <T variant="small" style={{ color: colors.tealDark, fontFamily: fonts.semibold }}>
+            <T variant="small" style={{ color: colors.tealDark, fontFamily: fonts.bold, fontSize: 13 }}>
               {action}
             </T>
           </Pressable>
@@ -325,8 +327,16 @@ export function Stars({ value, size = 14, onChange }: { value: number; size?: nu
   return (
     <View style={{ flexDirection: 'row', gap: size > 20 ? 8 : 2 }}>
       {[1, 2, 3, 4, 5].map((i) => {
-        const name: IconName = value >= i ? 'star' : value >= i - 0.5 ? 'star-half' : 'star-outline';
-        const icon = <Ionicons name={name} size={size} color={colors.amber} />;
+        // The logo's sparkle instead of a generic star: filled up to the rating, outlined after it.
+        const on = value >= i - 0.5;
+        const r = size / 2;
+        const q = r * 0.17;
+        const d = `M${r} 1Q${r + q} ${r - q} ${size - 1} ${r}Q${r + q} ${r + q} ${r} ${size - 1}Q${r - q} ${r + q} 1 ${r}Q${r - q} ${r - q} ${r} 1Z`;
+        const icon = (
+          <Svg width={size} height={size}>
+            <Path d={d} fill={on ? colors.amber : 'none'} stroke={on ? colors.amber : colors.line} strokeWidth={1.5} />
+          </Svg>
+        );
         return onChange ? (
           <Pressable key={i} onPress={() => { tap(); onChange(i); }} accessibilityLabel={`${i} star`} hitSlop={4}>
             {icon}
@@ -380,9 +390,9 @@ export function Field({ label, hint, style, ...rest }: ComponentProps<typeof Tex
 
 export const styles = StyleSheet.create({
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: colors.line,
+    borderRadius: 12,
     paddingHorizontal: spacing.lg,
     height: 52,
     fontFamily: fonts.medium,
@@ -392,7 +402,7 @@ export const styles = StyleSheet.create({
   },
   btn: {
     minHeight: 52,
-    borderRadius: radius.md,
+    borderRadius: 12,
     paddingHorizontal: spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
@@ -402,7 +412,8 @@ export const styles = StyleSheet.create({
   },
   btnSmall: { minHeight: 40, paddingHorizontal: spacing.md, borderRadius: radius.sm },
   btnText: { fontFamily: fonts.bold, fontSize: 15.5 },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.lg, ...shadow.card },
+  // Flat like the logo: a thin border instead of a drop shadow.
+  card: { backgroundColor: colors.card, borderRadius: 14, padding: spacing.lg, borderWidth: 1.5, borderColor: colors.line },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 56 },
   footer: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, backgroundColor: colors.white, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
@@ -412,9 +423,9 @@ export const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.line,
     backgroundColor: colors.white,
   },
   chipText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.navy },

@@ -1,26 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Avatar } from '../../components/Avatar';
+import { HouseAvatar, HouseBeforeAfter, Marker, Sparkle } from '../../components/brand';
 import { DesignThumb } from '../../components/DesignPreview';
 import { RoomIllustration } from '../../components/RoomIllustration';
-import { Badge, Button, Card, IconTile, Row, Section, T, tap } from '../../components/ui';
+import { Badge, Button, Card, IconTile, Row, Section, T, tap, Txt } from '../../components/ui';
 import { config } from '../../config';
 import { PALETTES, ROOM_TYPES, STYLES } from '../../data/catalog';
 import { budgetLabel, cityLabel, designName, projectTitle, roomLabel, styleBlurb, styleLabel, useT, type TKey } from '../../i18n';
 import { pkr } from '../../lib/format';
 import { useApp } from '../../store/useApp';
-import { colors, fonts, radius, spacing } from '../../theme';
-
-const JOURNEY: { n: string; label: TKey }[] = [
-  { n: '01', label: 'home.j.scan' },
-  { n: '02', label: 'home.j.design' },
-  { n: '03', label: 'home.j.match' },
-  { n: '04', label: 'home.j.compare' },
-  { n: '05', label: 'home.j.build' },
-];
+import { colors, fonts, spacing } from '../../theme';
 
 const WHY: { icon: 'eye-outline' | 'shield-checkmark-outline' | 'git-compare-outline' | 'lock-closed-outline'; title: TKey; body: TKey }[] = [
   { icon: 'eye-outline', title: 'home.why1.title', body: 'home.why1.body' },
@@ -32,6 +23,7 @@ const WHY: { icon: 'eye-outline' | 'shield-checkmark-outline' | 'git-compare-out
 export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { t, ur } = useT();
   const { user, designs, projects, resetDraft, updateDraft, referralUsed } = useApp();
   const active = projects.find((p) => p.status === 'active');
@@ -47,68 +39,61 @@ export default function Home() {
     router.push('/design/capture');
   };
 
+  const heroW = Math.min(width - 72, 340);
+  const [tag1, tag2] = t('home.heroTitle').split('\n');
+
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingTop: insets.top + spacing.md, paddingBottom: spacing.xxxl }} showsVerticalScrollIndicator={false}>
-      <View style={{ paddingHorizontal: spacing.lg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.white }} contentContainerStyle={{ paddingBottom: spacing.xxxl }} showsVerticalScrollIndicator={false}>
+      {/* Teal header; the house-shaped before/after sits half on it, half below it. */}
+      <View style={[styles.band, { height: insets.top + 236 }]} />
+      <View style={{ paddingTop: insets.top + spacing.md, paddingHorizontal: spacing.lg }}>
         <Row style={{ justifyContent: 'space-between' }}>
           <Pressable onPress={() => router.push('/(tabs)/profile')} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 1 }}>
-            <Avatar uri={user?.avatarUri} name={user?.name ?? 'R'} size={48} round />
+            <HouseAvatar uri={user?.avatarUri} name={user?.name ?? 'R'} size={42} bg="rgba(255,255,255,0.2)" />
             <View style={{ flexShrink: 1 }}>
-              <T variant="small">{t('home.greeting')}</T>
-              <T variant="h1" numberOfLines={1}>{user?.name?.split(' ')[0] ?? t('home.there')} 👋</T>
+              <T variant="small" style={{ color: 'rgba(255,255,255,0.85)' }}>{t('home.greeting')}</T>
+              <T variant="h1" numberOfLines={1} style={{ color: colors.white, fontFamily: fonts.extrabold, fontSize: 20, lineHeight: 26 }}>{user?.name || t('home.there')}</T>
             </View>
           </Pressable>
           <Pressable onPress={() => router.push('/(tabs)/profile')} style={styles.cityPill}>
-            <Ionicons name="location" size={14} color={colors.tealDark} />
-            <T variant="small" style={{ color: colors.navy, fontFamily: fonts.semibold }}>{cityLabel(user?.city ?? 'Sukkur')}</T>
+            <Ionicons name="location" size={14} color={colors.white} />
+            <T variant="small" style={{ color: colors.white, fontFamily: fonts.bold }}>{cityLabel(user?.city ?? 'Sukkur')}</T>
           </Pressable>
         </Row>
 
-        {/* Hero */}
-        <LinearGradient colors={[colors.navy, colors.navyDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-          {/* Urdu reads right-to-left, so the art moves to the left and the text sits on the dark right side. */}
-          <View style={[styles.heroArt, ur && styles.heroArtUr]}>
-            <RoomIllustration paletteId="teal-feature" styleId="modern" flooringId="porcelain" ceilingId="cove" extras={['panelling']} />
-            <LinearGradient colors={[colors.navyDeep, 'transparent']} start={{ x: ur ? 1 : 0, y: 0 }} end={{ x: ur ? 0.3 : 0.7, y: 0 }} style={StyleSheet.absoluteFill} />
-          </View>
-          <T variant="overline" style={{ color: colors.amber }}>{t('home.heroOverline')}</T>
-          <T variant="display" style={{ color: colors.white, marginTop: spacing.sm, fontSize: 27, lineHeight: 33 }}>
-            {t('home.heroTitle')}
-          </T>
-          <T style={{ color: 'rgba(255,255,255,0.78)', marginTop: spacing.sm, maxWidth: 220, alignSelf: ur ? 'flex-end' : 'flex-start' }}>{t('home.heroBody')}</T>
-          <Button title={t('home.heroCta')} kind="amber" icon="camera" onPress={() => startDesign()} style={{ marginTop: spacing.lg, alignSelf: ur ? 'flex-end' : 'flex-start' }} />
-        </LinearGradient>
+        <Pressable onPress={() => startDesign()} accessibilityRole="button" accessibilityLabel={t('home.heroCta')} style={{ alignItems: 'center', marginTop: spacing.xl }}>
+          <HouseBeforeAfter width={heroW} before={BEFORE} after={AFTER} beforeLabel={t('ba.before')} afterLabel={t('ba.after')} />
+        </Pressable>
 
-        {/* Journey */}
-        <View style={{ marginTop: spacing.xl }}>
-          <View style={styles.stepLine} />
-          <Row gap={0}>
-            {JOURNEY.map((j, i) => (
-              <View key={j.n} style={{ flex: 1, alignItems: 'center' }}>
-                <View style={[styles.step, i === JOURNEY.length - 1 && { backgroundColor: colors.amber }]}>
-                  <T style={{ color: colors.white, fontFamily: fonts.bold, fontSize: 13 }}>{j.n}</T>
-                </View>
-                <T variant="caption" style={{ marginTop: 4, color: colors.navy, fontFamily: fonts.bold, letterSpacing: 0.3 }}>{t(j.label).toUpperCase()}</T>
-              </View>
-            ))}
-          </Row>
+        {/* The logo's tagline */}
+        <View style={{ marginTop: spacing.lg }}>
+          <T style={[styles.tagline, ur && { textAlign: 'right' }]}>{tag1}</T>
+          {!!tag2 && <T style={[styles.tagline, { color: colors.teal }, ur && { textAlign: 'right' }]}>{tag2}</T>}
+          <T style={{ marginTop: spacing.sm, alignSelf: ur ? 'flex-end' : 'flex-start' }}>{t('home.heroBody')}</T>
         </View>
+        <Pressable onPress={() => startDesign()} accessibilityRole="button" style={({ pressed }) => [styles.cta, pressed && { opacity: 0.9 }]}>
+          <Sparkle size={20} />
+          <Txt style={styles.ctaText}>{t('home.heroCta')}</Txt>
+        </Pressable>
       </View>
 
       {active && (
         <View style={{ paddingHorizontal: spacing.lg }}>
-          <Section title={t('home.activeProject')}>
+          <Section title={t('home.activeProject')} action={t('home.seeAll')} onAction={() => router.push('/(tabs)/projects')}>
             <Card onPress={() => router.push(`/project/${active.id}`)}>
-              <Row>
-                <IconTile icon="hammer" bg={colors.amberSoft} color={colors.amberDark} />
-                <View style={{ flex: 1 }}>
-                  <T variant="h3" numberOfLines={1}>{projectTitle(active, designs)}</T>
-                  <T variant="small">
-                    {t('home.milestonesComplete', { done: active.milestones.filter((m) => m.status === 'released').length, total: active.milestones.length, amount: pkr(active.price - active.discount) })}
-                  </T>
-                </View>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <T variant="h3" numberOfLines={1} style={{ flex: 1, fontFamily: fonts.extrabold, color: colors.navy }}>{projectTitle(active, designs)}</T>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
               </Row>
+              <Row style={{ marginTop: spacing.md }} gap={6}>
+                {active.milestones.map((m, i) => {
+                  const firstOpen = active.milestones.findIndex((x) => x.status !== 'released');
+                  return <Marker key={m.id} state={m.status === 'released' ? 'done' : i === firstOpen ? 'now' : 'next'} label={i + 1} size={28} />;
+                })}
+              </Row>
+              <T variant="small" style={{ marginTop: spacing.sm }}>
+                {t('home.milestonesComplete', { done: active.milestones.filter((m) => m.status === 'released').length, total: active.milestones.length, amount: pkr(active.price - active.discount) })}
+              </T>
             </Card>
           </Section>
         </View>
@@ -117,9 +102,13 @@ export default function Home() {
       <Section title={t('home.renovating')} style={{ paddingHorizontal: spacing.lg }} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
         {ROOM_TYPES.map((r) => (
-          <Pressable key={r.id} onPress={() => { tap(); startDesign({ roomTypeId: r.id, area: r.defaultArea }); }} style={styles.roomTile}>
-            <IconTile icon={r.icon} size={46} />
-            <T variant="small" style={{ color: colors.navy, fontFamily: fonts.semibold, marginTop: spacing.sm }}>{roomLabel(r.id)}</T>
+          <Pressable key={r.id} onPress={() => { tap(); startDesign({ roomTypeId: r.id, area: r.defaultArea }); }} style={({ pressed }) => [styles.roomTile, pressed && { backgroundColor: colors.teal }]}>
+            {({ pressed }) => (
+              <>
+                <Ionicons name={r.icon} size={26} color={pressed ? colors.white : colors.navy} />
+                <T variant="small" numberOfLines={1} style={{ color: pressed ? colors.white : colors.navy, fontFamily: fonts.bold, marginTop: spacing.sm }}>{roomLabel(r.id)}</T>
+              </>
+            )}
           </Pressable>
         ))}
       </ScrollView>
@@ -143,7 +132,7 @@ export default function Home() {
       <View style={{ paddingHorizontal: spacing.lg }}>
         {favourites.length > 0 ? (
           <Section title={t('home.pickedFor', { name: firstName })} action={t('common.edit')} onAction={() => router.push('/profile-edit')}>
-            <Card style={{ backgroundColor: colors.tealMist }}>
+            <Card style={{ backgroundColor: colors.tealTint, borderColor: colors.tealTint }}>
               <T variant="small" style={{ color: colors.text }}>
                 {user?.budget ? t('home.pickedBodyBudget', { budget: budgetLabel(user.budget) }) : t('home.pickedBody')}
               </T>
@@ -155,7 +144,7 @@ export default function Home() {
             </Card>
           </Section>
         ) : (
-          <Card style={{ marginTop: spacing.xxl, backgroundColor: colors.tealMist }} onPress={() => router.push('/profile-edit')}>
+          <Card style={{ marginTop: spacing.xxl, backgroundColor: colors.tealTint, borderColor: colors.tealTint }} onPress={() => router.push('/profile-edit')}>
             <Row>
               <IconTile icon="heart-outline" bg={colors.white} />
               <View style={{ flex: 1 }}>
@@ -209,9 +198,9 @@ export default function Home() {
         </Section>
 
         {!referralUsed && (
-          <Card style={{ marginTop: spacing.lg, backgroundColor: colors.amberSoft }}>
+          <Card style={{ marginTop: spacing.lg, backgroundColor: colors.amberTint, borderColor: colors.amberTint }}>
             <Row>
-              <IconTile icon="gift" bg={colors.amber} color={colors.navyDeep} />
+              <View style={styles.giftTile}><Sparkle size={24} color={colors.navy} /></View>
               <View style={{ flex: 1 }}>
                 <T variant="bodyStrong">{t('home.referralTitle', { amount: pkr(config.referralDiscount) })}</T>
                 <T variant="small">{t('home.referralBefore')} <T variant="small" style={{ fontFamily: fonts.bold, color: colors.navy }}>{config.referralCode}</T> {t('home.referralAfter')}</T>
@@ -225,15 +214,18 @@ export default function Home() {
   );
 }
 
+const BEFORE = require('../../../assets/images/onboarding-before.jpg');
+const AFTER = require('../../../assets/images/onboarding-after.jpg');
+
 const styles = StyleSheet.create({
-  cityPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.white, paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
-  hero: { marginTop: spacing.lg, borderRadius: radius.xl, padding: spacing.xl, overflow: 'hidden', minHeight: 250 },
-  heroArt: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '58%', opacity: 0.9 },
-  heroArtUr: { right: undefined, left: 0 },
-  step: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.tealDeep, alignItems: 'center', justifyContent: 'center' },
-  stepLine: { position: 'absolute', left: '10%', right: '10%', top: 18, height: 3, borderRadius: 2, backgroundColor: colors.teal },
-  roomTile: { width: 104, paddingVertical: spacing.lg, alignItems: 'center', backgroundColor: colors.white, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border },
+  band: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.teal },
+  cityPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
+  tagline: { fontFamily: fonts.extrabold, fontSize: 28, lineHeight: 34, color: colors.navy, letterSpacing: -0.8 },
+  cta: { marginTop: spacing.lg, height: 56, borderRadius: 12, backgroundColor: colors.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md },
+  ctaText: { fontFamily: fonts.bold, fontSize: 15.5, color: colors.white },
+  roomTile: { width: 104, height: 92, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, backgroundColor: colors.mist, borderRadius: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  styleCard: { width: '47.5%', flexGrow: 1, backgroundColor: colors.white, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: colors.border },
-  favTag: { position: 'absolute', right: 8, top: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' },
+  styleCard: { width: '47.5%', flexGrow: 1, backgroundColor: colors.white, borderRadius: 14, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.line },
+  favTag: { position: 'absolute', right: 8, top: 8, width: 22, height: 22, borderRadius: 6, backgroundColor: colors.teal, alignItems: 'center', justifyContent: 'center' },
+  giftTile: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.amber, alignItems: 'center', justifyContent: 'center' },
 });

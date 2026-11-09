@@ -23,12 +23,12 @@ export default function VendorProfileTab() {
     : [];
 
   return (
-    <Screen back={false} title={t('vendorHub.tabAccount')}>
+    <Screen back={false}>
       <ProfileHeader
         name={vendor?.business_name || profile.full_name}
         avatarUri={vendor?.logo_url ?? profile.avatar_url}
         coverUri={vendor?.cover_url}
-        roleLabel={t('role.vendor').toUpperCase()}
+        roleLabel={t('role.vendor')}
         roleTone="amber"
         lines={[vendor ? vendor.services.map(serviceLabel).join(' · ') : '', `${profile.full_name} · ${cityLabel(vendor?.city ?? profile.city)}`]}
         bio={vendor?.about || profile.bio}
@@ -72,7 +72,7 @@ export default function VendorProfileTab() {
           </Section>
         </>
       ) : (
-        <Card style={{ marginTop: spacing.lg, backgroundColor: colors.amberSoft }}>
+        <Card style={{ marginTop: spacing.lg, backgroundColor: colors.amberTint, borderColor: colors.amberTint }}>
           <T variant="bodyStrong">{t('vendorHub.startTitle')}</T>
           <T variant="small" style={{ marginTop: 4 }}>{t('vendorHub.startBody')}</T>
           <Button title={t('vendorHub.startCta')} small style={{ marginTop: spacing.md, alignSelf: 'flex-start' }} onPress={() => router.push('/vendor-signup')} />

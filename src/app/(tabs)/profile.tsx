@@ -11,12 +11,12 @@ import { ProfileHeader } from '../../components/ProfileHeader';
 import { budgetLabel, cityLabel, styleLabel, useT } from '../../i18n';
 import { aiServerConfigured } from '../../services/ai';
 import { useApp } from '../../store/useApp';
-import { colors, spacing } from '../../theme';
+import { colors, fonts, spacing } from '../../theme';
 
 function Item({ icon, label, detail, onPress }: { icon: IconName; label: string; detail?: string; onPress: () => void }) {
   return (
     <Pressable onPress={() => { tap(); onPress(); }} style={({ pressed }) => [styles.item, pressed && { opacity: 0.7 }]}>
-      <IconTile icon={icon} size={38} />
+      <Ionicons name={icon} size={22} color={colors.navy} />
       <View style={{ flex: 1 }}>
         <T variant="bodyStrong">{label}</T>
         {!!detail && <T variant="caption">{detail}</T>}
@@ -51,11 +51,11 @@ export default function Profile() {
   const prefs = user?.preferredStyles ?? [];
 
   return (
-    <Screen back={false} title={t('profile.title')}>
+    <Screen back={false}>
       <ProfileHeader
         name={user?.name || t('home.there')}
         avatarUri={user?.avatarUri}
-        roleLabel={t('role.customer').toUpperCase()}
+        roleLabel={t('role.customer')}
         roleTone="teal"
         lines={[[user?.area, cityLabel(user?.city ?? '')].filter(Boolean).join(', '), user?.phone || t('profile.noPhone')]}
         bio={user?.bio}
@@ -63,9 +63,9 @@ export default function Profile() {
         onEdit={() => router.push('/profile-edit')}
         extra={
           <Row style={{ marginTop: spacing.lg }} gap={spacing.sm}>
-            <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{designs.length}</T><T variant="caption">{t('profile.statDesigns')}</T></View>
-            <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{projects.length}</T><T variant="caption">{t('profile.statProjects')}</T></View>
-            <View style={styles.stat}><T variant="h2" style={{ color: colors.tealDark }}>{designs.filter((d) => d.premium).length}</T><T variant="caption">{t('profile.statPremium')}</T></View>
+            <View style={styles.stat}><T variant="h2" style={{ color: colors.navy, fontFamily: fonts.extrabold }}>{designs.length}</T><T variant="caption">{t('profile.statDesigns')}</T></View>
+            <View style={styles.stat}><T variant="h2" style={{ color: colors.navy, fontFamily: fonts.extrabold }}>{projects.length}</T><T variant="caption">{t('profile.statProjects')}</T></View>
+            <View style={styles.stat}><T variant="h2" style={{ color: colors.teal, fontFamily: fonts.extrabold }}>{designs.filter((d) => d.premium).length}</T><T variant="caption">{t('profile.statPremium')}</T></View>
           </Row>
         }
       />
@@ -75,7 +75,12 @@ export default function Profile() {
           <T variant="caption">{t('edit.styles')}</T>
           {prefs.length ? (
             <Row style={{ flexWrap: 'wrap', marginTop: 6 }} gap={6}>
-              {prefs.map((s) => <Badge key={s} label={styleLabel(s).toUpperCase()} tone="teal" icon="color-palette-outline" />)}
+              {prefs.map((s, i) => (
+                <View key={s} style={styles.styleTag}>
+                  <View style={[styles.styleMark, { backgroundColor: [colors.teal, colors.amber, colors.navy][i % 3] }]} />
+                  <T variant="small" style={{ color: colors.navy, fontFamily: fonts.bold }}>{styleLabel(s)}</T>
+                </View>
+              ))}
             </Row>
           ) : (
             <T variant="small" style={{ marginTop: 4 }}>{t('profile.noStyles')}</T>
@@ -100,7 +105,7 @@ export default function Profile() {
 
       {/* With accounts on, vendors register with a separate vendor account instead. */}
       {!auth.enabled && (
-        <Card style={{ marginTop: spacing.xl, backgroundColor: colors.navy }} onPress={() => router.push('/vendor-signup')}>
+        <Card style={{ marginTop: spacing.xl, backgroundColor: colors.navy, borderColor: colors.navy }} onPress={() => router.push('/vendor-signup')}>
           <Row>
             <IconTile icon="briefcase" bg="rgba(10,180,154,0.2)" color={colors.teal} />
             <View style={{ flex: 1 }}>
@@ -142,6 +147,8 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
-  stat: { flex: 1, alignItems: 'center', backgroundColor: colors.tealMist, borderRadius: 12, paddingVertical: spacing.md },
+  stat: { flex: 1, alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: colors.line, paddingVertical: spacing.md },
   item: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
+  styleTag: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 32, paddingRight: 12, borderRadius: 8, backgroundColor: colors.mist, overflow: 'hidden' },
+  styleMark: { width: 5, alignSelf: 'stretch' },
 });

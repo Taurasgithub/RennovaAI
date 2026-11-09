@@ -13,11 +13,11 @@ export default function AdminProfileTab() {
   if (!profile) return null;
 
   return (
-    <Screen back={false} title={t('admin.tabAccount')}>
+    <Screen back={false}>
       <ProfileHeader
         name={profile.full_name || profile.email}
         avatarUri={profile.avatar_url}
-        roleLabel={t('role.admin').toUpperCase()}
+        roleLabel={t('role.admin')}
         roleTone="navy"
         lines={[profile.job_title || t('edit.noJobTitle'), cityLabel(profile.city)]}
         bio={profile.bio}

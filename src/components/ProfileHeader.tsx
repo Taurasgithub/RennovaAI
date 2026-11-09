@@ -1,12 +1,21 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { colors, radius, shadow, spacing } from '../theme';
-import { Avatar } from './Avatar';
-import { Badge, Button, T } from './ui';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { colors, fonts, spacing } from '../theme';
+import { Floor, HouseAvatar } from './brand';
+import { T, tap } from './ui';
 
-/** Personal header shared by customer, vendor and admin profiles: cover, avatar, name, role, details and bio. */
+const BAND: Record<'teal' | 'amber' | 'navy', { band: string; avatar: string; initials: string }> = {
+  teal: { band: colors.teal, avatar: colors.navy, initials: colors.white }, // customer
+  amber: { band: colors.navy, avatar: colors.amber, initials: colors.navy }, // vendor
+  navy: { band: colors.navy, avatar: colors.teal, initials: colors.white }, // admin
+};
+
+/**
+ * Personal header shared by customer, vendor and admin profiles: a role-coloured band, the photo in
+ * the logo's house shape standing on its floor, then name, role, details and bio.
+ */
 export function ProfileHeader({
   name,
   avatarUri,
@@ -30,40 +39,38 @@ export function ProfileHeader({
   onEdit: () => void;
   extra?: ReactNode;
 }) {
+  const c = BAND[roleTone];
   return (
-    <View style={styles.card}>
-      <View style={styles.cover}>
-        {coverUri ? (
-          <Image source={{ uri: coverUri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />
-        ) : (
-          <LinearGradient colors={[colors.teal, colors.tealDeep, colors.navy]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-        )}
+    <View style={{ marginHorizontal: -spacing.lg }}>
+      <View style={[styles.band, { backgroundColor: c.band }]}>
+        {!!coverUri && <Image source={{ uri: coverUri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} />}
+        <Pressable onPress={() => { tap(); onEdit(); }} accessibilityRole="button" accessibilityLabel={editLabel} style={styles.edit}>
+          <Ionicons name="create-outline" size={16} color={colors.navy} />
+          <T variant="small" style={{ color: colors.navy, fontFamily: fonts.bold }}>{editLabel}</T>
+        </Pressable>
+      </View>
+      <View style={styles.avatar}>
+        <HouseAvatar uri={avatarUri} name={name} size={104} bg={c.avatar} color={c.initials} ring={colors.white} />
+        <Floor width={150} height={12} inset={14} />
       </View>
       <View style={styles.body}>
-        <View style={styles.avatarRow}>
-          <View style={styles.avatarRing}>
-            <Avatar uri={avatarUri} name={name} size={84} round />
-          </View>
-          <Button title={editLabel} kind="secondary" icon="create-outline" small onPress={onEdit} style={{ marginBottom: 4 }} />
-        </View>
-        <T variant="h1" style={{ marginTop: spacing.sm }}>{name}</T>
-        <View style={{ flexDirection: 'row', marginTop: 4 }}>
-          <Badge label={roleLabel} tone={roleTone} />
-        </View>
+        <T style={styles.name}>{name}</T>
+        <T variant="small" style={styles.role}>{roleLabel}</T>
         {lines.filter(Boolean).map((l) => (
-          <T key={l} variant="small" style={{ marginTop: 4 }}>{l}</T>
+          <T key={l} variant="small" style={{ marginTop: 2, textAlign: 'center' }}>{l}</T>
         ))}
-        {!!bio && <T style={{ marginTop: spacing.md, color: colors.text }}>{bio}</T>}
-        {extra}
+        {!!bio && <T style={{ marginTop: spacing.md, color: colors.text, textAlign: 'center' }}>{bio}</T>}
+        <View style={{ alignSelf: 'stretch' }}>{extra}</View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: spacing.sm, borderRadius: radius.xl, backgroundColor: colors.white, overflow: 'hidden', ...shadow.card },
-  cover: { height: 110, backgroundColor: colors.tealSoft },
-  body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
-  avatarRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -42 },
-  avatarRing: { borderWidth: 4, borderColor: colors.white, borderRadius: 50, backgroundColor: colors.white },
+  band: { height: 128, overflow: 'hidden' },
+  edit: { position: 'absolute', right: spacing.lg, top: spacing.md, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.white, paddingHorizontal: 12, height: 34, borderRadius: 10 },
+  avatar: { alignItems: 'center', marginTop: -70 },
+  body: { alignItems: 'center', paddingHorizontal: spacing.lg },
+  name: { fontFamily: fonts.extrabold, fontSize: 22, lineHeight: 28, color: colors.navy, letterSpacing: -0.4, marginTop: spacing.sm, textAlign: 'center' },
+  role: { color: colors.tealDark, fontFamily: fonts.bold, marginTop: 2, letterSpacing: 0.4 },
 });

@@ -44,6 +44,7 @@ export const ur: Record<TKey, string> = {
   'tabs.vendors': 'وینڈرز',
   'tabs.projects': 'پراجیکٹس',
   'tabs.profile': 'پروفائل',
+  'tabs.newDesign': 'ڈیزائن',
 
   // Catalog — rooms
   'room.living': 'لیونگ روم',

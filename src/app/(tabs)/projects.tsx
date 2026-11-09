@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
+import { HouseBar } from '../../components/brand';
 import { DesignThumb } from '../../components/DesignPreview';
 import { Badge, Card, EmptyState, Row, Screen, T } from '../../components/ui';
 import { getVendor } from '../../data/vendors';
@@ -43,8 +44,8 @@ export default function Projects() {
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
               </Row>
-              <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.border, marginTop: spacing.md, overflow: 'hidden' }}>
-                <View style={{ width: `${(done / p.milestones.length) * 100}%`, height: 6, backgroundColor: colors.teal }} />
+              <View style={{ marginTop: spacing.md }}>
+                <HouseBar height={18} steps={p.milestones.map((m) => (m.status === 'released' ? 'done' : m.status === 'in_escrow' ? 'now' : 'next'))} />
               </View>
             </Card>
           );

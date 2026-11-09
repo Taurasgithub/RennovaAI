@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Redirect, Slot, Tabs, usePathname, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../auth/AuthProvider';
+import { BrandTabBar, Sparkle } from '../../components/brand';
 import { tap, Txt, type IconName } from '../../components/ui';
 import { useT, type TKey } from '../../i18n';
-import { colors, fonts, radius, spacing } from '../../theme';
+import { colors, fonts, spacing } from '../../theme';
 
 const NAV: { href: '/admin' | '/admin/vendors' | '/admin/users' | '/admin/account'; name: string; label: TKey; icon: IconName; active: IconName }[] = [
   { href: '/admin', name: 'index', label: 'admin.tabOverview', icon: 'speedometer-outline', active: 'speedometer' },
@@ -20,8 +20,7 @@ const WIDE = 900;
 
 export default function AdminLayout() {
   const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const { t, ur } = useT();
+  const { t } = useT();
   const auth = useAuth();
   if (!auth.enabled || (auth.ready && auth.profile?.role !== 'admin')) return <Redirect href="/" />;
   // Don't mount admin screens (which query every account) until the role is known.
@@ -31,13 +30,9 @@ export default function AdminLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.navy,
-        tabBarInactiveTintColor: colors.textSubtle,
-        tabBarLabelStyle: ur ? { fontFamily: fonts.urdu, fontSize: 11.5, lineHeight: 26, height: 28 } : { fontFamily: fonts.semibold, fontSize: 11 },
-        tabBarStyle: { height: (ur ? 76 : 62) + insets.bottom, paddingTop: 6, paddingBottom: insets.bottom + 6, borderTopColor: colors.border, backgroundColor: colors.white },
-      }}
+      screenOptions={{ headerShown: false }}
+      // Admin gets the navy bar; the active tab sits on an amber house.
+      tabBar={(props) => <BrandTabBar {...props} dark />}
     >
       {NAV.map((n) => (
         <Tabs.Screen
@@ -65,7 +60,10 @@ function Sidebar() {
             <Text style={styles.wordmark}>
               Rennova<Text style={{ color: colors.teal }}>AI</Text>
             </Text>
-            <Txt style={styles.brandSub}>{t('admin.panel')}</Txt>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Sparkle size={10} />
+              <Txt style={styles.brandSub}>{t('admin.panel')}</Txt>
+            </View>
           </View>
         </View>
         {NAV.map((n) => {
@@ -82,8 +80,8 @@ function Sidebar() {
               // `hovered` exists on web (react-native-web) but not in the native Pressable types.
               style={(state) => [styles.navItem, on && styles.navOn, (state as { hovered?: boolean }).hovered && !on && styles.navHover]}
             >
-              <Ionicons name={on ? n.active : n.icon} size={19} color={on ? colors.white : 'rgba(255,255,255,0.75)'} />
-              <Txt style={[styles.navText, on && { color: colors.white }]}>{t(n.label)}</Txt>
+              <Ionicons name={on ? n.active : n.icon} size={19} color={on ? colors.navy : 'rgba(255,255,255,0.75)'} />
+              <Txt style={[styles.navText, on && { color: colors.navy, fontFamily: fonts.bold }]}>{t(n.label)}</Txt>
             </Pressable>
           );
         })}
@@ -100,13 +98,13 @@ function Sidebar() {
 }
 
 const styles = StyleSheet.create({
-  shell: { flex: 1, flexDirection: 'row', backgroundColor: colors.bg },
+  shell: { flex: 1, flexDirection: 'row', backgroundColor: colors.mist },
   sidebar: { width: 240, backgroundColor: colors.navy, paddingVertical: spacing.xl, paddingHorizontal: spacing.md, gap: 4 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: spacing.xl },
   wordmark: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.white, letterSpacing: -0.4 },
   brandSub: { fontFamily: fonts.medium, fontSize: 11.5, color: 'rgba(255,255,255,0.6)' },
-  navItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 11, borderRadius: radius.md },
-  navOn: { backgroundColor: colors.tealDeep },
+  navItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 11, borderRadius: 10 },
+  navOn: { backgroundColor: colors.amber },
   navHover: { backgroundColor: 'rgba(255,255,255,0.08)' },
   navText: { fontFamily: fonts.semibold, fontSize: 14.5, color: 'rgba(255,255,255,0.8)' },
   me: { fontFamily: fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.55)', paddingHorizontal: spacing.sm },

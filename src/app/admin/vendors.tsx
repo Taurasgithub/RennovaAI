@@ -1,8 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { useAdminData } from '../../admin/useAdminData';
-import { Badge, Button, Card, Chip, EmptyState, Row, Screen, T } from '../../components/ui';
+import { AdminTitle, HouseAvatar, Marker, TabStrip, WindowGrid } from '../../components/brand';
+import { Badge, Button, Card, EmptyState, Row, Screen, T } from '../../components/ui';
 import { cityLabel, serviceLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
 import type { VendorProfile, VendorStatus } from '../../lib/supabase';
@@ -26,13 +26,10 @@ export default function AdminVendors() {
   const count = (f: Filter) => data.vendors.filter((v) => f === 'all' || v.status === f).length;
 
   return (
-    <Screen back={false} title={t('admin.vendorsTitle')} subtitle={t('admin.vendorsSubtitle')}>
-      <Row style={{ flexWrap: 'wrap', marginTop: spacing.sm }} gap={6}>
-        {FILTERS.map((f) => (
-          <Chip key={f.id} label={`${t(f.label)} (${count(f.id)})`} selected={filter === f.id} onPress={() => setFilter(f.id)} />
-        ))}
-      </Row>
-      {!!data.error && <T variant="small" style={{ color: colors.danger, marginTop: spacing.sm }}>{data.error}</T>}
+    <Screen back={false} bg={colors.mist}>
+      <AdminTitle kicker={t('role.admin')} title={t('admin.vendorsTitle')} sub={t('admin.vendorsSubtitle')} />
+      <TabStrip items={FILTERS.map((f) => ({ id: f.id, label: `${t(f.label)} (${count(f.id)})` }))} value={filter} onChange={setFilter} />
+      {!!data.error && <T variant="small" style={{ color: colors.alert, marginTop: spacing.sm }}>{data.error}</T>}
 
       {data.loading ? (
         <ActivityIndicator color={colors.teal} style={{ marginTop: spacing.xxl }} />
@@ -60,9 +57,10 @@ function VendorCard({ v, data }: { v: VendorProfile; data: ReturnType<typeof use
 
   return (
     <Card style={{ marginTop: spacing.md }}>
-      <Row style={{ alignItems: 'flex-start' }}>
+      <Row style={{ alignItems: 'flex-start' }} gap={spacing.md}>
+        <HouseAvatar uri={v.logo_url} name={v.business_name} size={44} bg={colors.teal} />
         <View style={{ flex: 1 }}>
-          <T variant="h3">{v.business_name}</T>
+          <T variant="h3" style={{ fontFamily: fonts.extrabold, color: colors.navy }}>{v.business_name}</T>
           <T variant="small">{v.owner_name} · {v.phone}{email ? ` · ${email}` : ''}</T>
         </View>
         <Badge
@@ -85,13 +83,14 @@ function VendorCard({ v, data }: { v: VendorProfile; data: ReturnType<typeof use
           const done = v.status === 'approved' || i < v.verification_step - 1;
           const current = v.status !== 'approved' && i === v.verification_step - 1;
           return (
-            <Row key={k} gap={6} style={{ marginTop: i ? 6 : 0 }}>
-              <Ionicons name={done ? 'checkmark-circle' : current ? 'time' : 'ellipse-outline'} size={18} color={done ? colors.success : current ? colors.amber : colors.textSubtle} />
-              <T variant="small" style={{ color: colors.text }}>{t(k)}</T>
+            <Row key={k} gap={spacing.sm} style={{ marginTop: i ? spacing.sm : 0 }}>
+              <Marker state={done ? 'done' : current ? 'now' : 'next'} label={i + 1} size={22} />
+              <T variant="small" style={{ color: colors.text, fontFamily: current ? fonts.bold : fonts.medium }}>{t(k)}</T>
             </Row>
           );
         })}
       </View>
+      {v.portfolio_urls.length > 0 && <WindowGrid images={v.portfolio_urls} height={150} bar={5} style={{ marginTop: spacing.md }} />}
       {v.status === 'rejected' && !!v.review_note && <T variant="small" style={{ marginTop: spacing.sm }}>{t('admin.note', { note: v.review_note })}</T>}
 
       {rejecting ? (
@@ -117,7 +116,7 @@ function VendorCard({ v, data }: { v: VendorProfile; data: ReturnType<typeof use
 }
 
 const styles = StyleSheet.create({
-  steps: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.bg },
+  steps: { marginTop: spacing.md, padding: spacing.md, borderRadius: 12, backgroundColor: colors.mist },
   note: { minHeight: 70, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: spacing.md, fontFamily: fonts.medium, color: colors.text, textAlignVertical: 'top' },
   action: { flexGrow: 1, flexBasis: 120 },
 });
