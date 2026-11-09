@@ -5,23 +5,39 @@ import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import multer from 'multer';
+import sharp from 'sharp';
 import { buildPrompt } from './prompt.js';
 
 const PORT = Number(process.env.PORT || 8080);
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-// OpenRouter wins when both keys are set.
-const PROVIDER = OPENROUTER_API_KEY ? 'openrouter' : 'openai';
-const IMAGE_MODEL = PROVIDER === 'openrouter'
-  ? process.env.OPENROUTER_IMAGE_MODEL || 'google/gemini-2.5-flash-image'
-  : process.env.IMAGE_MODEL || 'gpt-image-1';
+const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+const hasCloudflare = !!(CLOUDFLARE_ACCOUNT_ID && CLOUDFLARE_API_TOKEN);
+// IMAGE_PROVIDER picks one explicitly (cloudflare | openrouter | openai). Otherwise: OpenRouter, then Cloudflare, then OpenAI.
+const PROVIDER = process.env.IMAGE_PROVIDER || (OPENROUTER_API_KEY ? 'openrouter' : hasCloudflare ? 'cloudflare' : 'openai');
+const IMAGE_MODEL = {
+  openrouter: process.env.OPENROUTER_IMAGE_MODEL || 'google/gemini-2.5-flash-image',
+  // Free daily allowance on Workers AI; supports editing from reference images.
+  cloudflare: process.env.CLOUDFLARE_IMAGE_MODEL || '@cf/black-forest-labs/flux-2-klein-9b',
+  openai: process.env.IMAGE_MODEL || 'gpt-image-1',
+}[PROVIDER];
 const IMAGE_SIZE = process.env.IMAGE_SIZE || '1536x1024';
 const IMAGE_QUALITY = process.env.IMAGE_QUALITY || 'medium';
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
 const OPENROUTER_BASE_URL = (process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
 
-if (!OPENROUTER_API_KEY && !OPENAI_API_KEY) {
-  console.error('Missing OPENROUTER_API_KEY (or OPENAI_API_KEY) — copy .env.example to .env and set it.');
+const missing = {
+  openrouter: !OPENROUTER_API_KEY && 'OPENROUTER_API_KEY',
+  cloudflare: !hasCloudflare && 'CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN',
+  openai: !OPENAI_API_KEY && 'OPENAI_API_KEY',
+}[PROVIDER];
+if (missing === undefined) {
+  console.error(`Unknown IMAGE_PROVIDER "${PROVIDER}" — use cloudflare, openrouter or openai.`);
+  process.exit(1);
+}
+if (missing) {
+  console.error(`Missing ${missing} for the ${PROVIDER} image provider — see .env.example.`);
   process.exit(1);
 }
 
@@ -47,6 +63,32 @@ async function editWithOpenRouter(file, prompt) {
     }),
   });
   return { r, json: await r.json() };
+}
+
+/**
+ * Cloudflare Workers AI (FLUX.2): multipart request with the prompt and the room photo as input_image_0.
+ * FLUX.2 on Workers AI expects small reference images, so the photo is shrunk first.
+ * Returns the same { r, json } shape as the other providers ({ data: [{ b64_json }] }).
+ */
+async function editWithCloudflare(file, prompt) {
+  const [w, h] = IMAGE_SIZE.split('x').map(Number);
+  const ref = await sharp(file.buffer).rotate().resize(512, 512, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();
+  const form = new FormData();
+  form.append('prompt', prompt);
+  form.append('input_image_0', new Blob([ref], { type: 'image/jpeg' }), 'room.jpg');
+  // Keep the output under ~1 MP, same aspect ratio as IMAGE_SIZE.
+  const scale = Math.min(1, 1024 / Math.max(w || 1024, h || 768));
+  form.append('width', String(Math.round(((w || 1024) * scale) / 16) * 16));
+  form.append('height', String(Math.round(((h || 768) * scale) / 16) * 16));
+  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/${IMAGE_MODEL}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}` },
+    body: form,
+  });
+  const raw = await r.json().catch(() => ({}));
+  const image = raw?.result?.image;
+  const json = image ? { data: [{ b64_json: image, media_type: 'image/jpeg' }] } : { error: { message: raw?.errors?.[0]?.message || `HTTP ${r.status}` } };
+  return { r, json };
 }
 
 async function editWithOpenAI(file, prompt) {
@@ -89,9 +131,8 @@ app.post('/api/visualize', upload.single('image'), async (req, res) => {
     }
     const prompt = buildPrompt(choices);
 
-    const { r, json } = PROVIDER === 'openrouter'
-      ? await editWithOpenRouter(req.file, prompt)
-      : await editWithOpenAI(req.file, prompt);
+    const edit = { openrouter: editWithOpenRouter, cloudflare: editWithCloudflare, openai: editWithOpenAI }[PROVIDER];
+    const { r, json } = await edit(req.file, prompt);
     if (!r.ok) {
       console.error('Image API error', r.status, json?.error?.message);
       return res.status(502).json({ error: 'The AI engine is busy. Please try again in a moment.' });

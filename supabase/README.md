@@ -53,10 +53,18 @@ How the app does it: Supabase's web sign-in (OAuth + PKCE). On the web it redire
 4. Test: open the app → Welcome → *Continue with Google*. A new account goes to the profile step with the Google name and photo pre-filled.
 
 ## 5. Continue with Apple
-Needs a paid **Apple Developer Program** membership. How the app does it:
+How the app does it:
 - **iPhone/iPad**: Apple's own native sheet (`expo-apple-authentication`). The identity token goes to Supabase with a SHA-256 nonce. No client secret is needed for this path.
 - **Android and web**: Apple has no native sign-in there, so the app uses Supabase's web OAuth (same redirect URLs as Google). This path needs the Services ID + secret below.
 
+### 5a. iPhone only (no paid Apple account needed to test)
+In **Supabase → Authentication → Providers → Apple**: switch **Enable** on, set **Client IDs** to `com.rennovaai.app,host.exp.Exponent`, leave the secret empty, **Save**. That's enough for the native sheet:
+- In **Expo Go** on an iPhone it signs in through Expo's own Apple ID (`host.exp.Exponent`).
+- In your own iOS build (`com.rennovaai.app`) the App ID needs the *Sign in with Apple* capability (step 1 below), which needs a paid membership.
+
+On Android and web the Apple button is hidden until 5b is done (`EXPO_PUBLIC_APPLE_WEB_SIGNIN=false`).
+
+### 5b. Android and web (paid Apple Developer Program membership)
 In **Apple Developer → Certificates, Identifiers & Profiles**:
 1. **App ID**: *Identifiers → +* → App IDs → bundle ID `com.rennovaai.app` (must match `app.json`). Under Capabilities, tick **Sign in with Apple**. Leave the server-to-server notification URL empty.
 2. **Services ID** (for Android/web): *Identifiers → +* → Services IDs → e.g. `com.rennovaai.app.web`. Enable **Sign in with Apple** → *Configure*:
@@ -72,6 +80,8 @@ In **Supabase → Authentication → Providers → Apple**: switch **Enable** on
   - `com.rennovaai.app`: the native iOS app
   - `host.exp.Exponent`: only so native Apple sign-in works inside Expo Go while testing; remove before going live
 - **Secret Key (for OAuth)**: the generated secret from step 4.
+
+Then set `EXPO_PUBLIC_APPLE_WEB_SIGNIN=true` in `.env` and restart Expo, so the Apple button appears on Android and web.
 
 Testing native Apple sign-in needs a real iPhone (the iOS Simulator is limited). Expo Go works for a first test. Development and production builds pick up the *Sign in with Apple* capability from `app.json` (`ios.usesAppleSignIn`).
 

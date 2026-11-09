@@ -8,6 +8,12 @@ export const config = {
   /** Supabase project (accounts & roles). Both values are public by design; row-level security protects the data. */
   supabaseUrl: (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/$/, ''),
   supabaseKey: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
+  /**
+   * Show "Continue with Apple" on Android and web too. Off until Apple's web sign-in is set up
+   * (paid Apple Developer account: Services ID + secret, supabase/README.md step 5).
+   * iPhone always shows it: it uses Apple's native sheet, which needs no secret.
+   */
+  appleWebSignIn: process.env.EXPO_PUBLIC_APPLE_WEB_SIGNIN === 'true',
   supportWhatsApp: process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? '923000000000',
   supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? 'support@rennovaai.com',
   privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? 'https://rennovaai.com/privacy',

@@ -106,7 +106,10 @@ export function AccountSignIn() {
             onPress={() => !busy && run(() => signInWithApple(type))}
           />
         ) : (
-          <SocialButton label={t('auth.apple')} icon={<Ionicons name="logo-apple" size={22} color="#000" />} disabled={busy} onPress={() => run(() => signInWithApple(type))} />
+          // Elsewhere Apple only works through its web sign-in, which needs the paid Services ID setup.
+          (Platform.OS === 'ios' || config.appleWebSignIn) && (
+            <SocialButton label={t('auth.apple')} icon={<Ionicons name="logo-apple" size={22} color="#000" />} disabled={busy} onPress={() => run(() => signInWithApple(type))} />
+          )
         )}
       </View>
 
