@@ -26,7 +26,7 @@ export function GradientButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!off, busy: !!loading }}
+      aria-disabled={!!off} aria-busy={!!loading}
       onPress={() => {
         if (off) return;
         tap();
@@ -69,7 +69,7 @@ export function SocialButton({ label, icon, onPress, disabled }: { label: string
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
+      aria-disabled={!!disabled}
       onPress={() => {
         if (disabled) return;
         tap();

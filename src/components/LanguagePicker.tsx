@@ -23,7 +23,7 @@ export function LanguagePicker() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('lang.change')}
-        accessibilityState={{ expanded: open }}
+        aria-expanded={open}
         onPress={() => {
           tap();
           setOpen(!open);
@@ -43,7 +43,7 @@ export function LanguagePicker() {
               <Pressable
                 key={o.id}
                 accessibilityRole="menuitem"
-                accessibilityState={{ selected }}
+                aria-selected={selected}
                 onPress={() => {
                   tap();
                   setLanguage(o.id);

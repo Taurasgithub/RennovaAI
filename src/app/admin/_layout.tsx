@@ -72,7 +72,7 @@ function Sidebar() {
             <Pressable
               key={n.href}
               accessibilityRole="link"
-              accessibilityState={{ selected: on }}
+              aria-selected={on}
               onPress={() => {
                 tap();
                 router.navigate(n.href);

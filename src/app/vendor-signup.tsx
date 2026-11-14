@@ -11,6 +11,7 @@ import { dateLabel } from '../lib/format';
 import { cityLabel, serviceLabel, useT, type TKey } from '../i18n';
 import { supabase, type VendorStatus } from '../lib/supabase';
 import { useApp } from '../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, radius, spacing } from '../theme';
 
 const STEPS: [TKey, TKey][] = [
@@ -31,7 +32,7 @@ const STATUS: Record<VendorStatus, { label: TKey; tone: 'amber' | 'green' | 'gra
 export default function VendorSignup() {
   const { t } = useT();
   const auth = useAuth();
-  const { vendorApplication: local, submitVendorApplication, user } = useApp();
+  const { vendorApplication: local, submitVendorApplication, user } = useApp(useShallow((s) => ({ vendorApplication: s.vendorApplication, submitVendorApplication: s.submitVendorApplication, user: s.user })));
   const remote = auth.enabled ? auth.vendor : null;
   // With accounts on the application lives in Supabase; otherwise it stays on this device.
   const app: Application | null = auth.enabled

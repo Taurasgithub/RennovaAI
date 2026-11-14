@@ -7,6 +7,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/montserrat';
 import { NotoNastaliqUrdu_400Regular, NotoNastaliqUrdu_700Bold } from '@expo-google-fonts/noto-nastaliq-urdu';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -17,6 +18,12 @@ import { useApp } from '../store/useApp';
 import { colors } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Icon fonts draw private-use glyphs that screen readers announce as junk characters. Icons here are
+// decoration; buttons carry their own labels, so hide every icon from assistive tech by default.
+for (const Icon of [Ionicons, MaterialCommunityIcons] as { defaultProps?: object }[]) {
+  Icon.defaultProps = { ...Icon.defaultProps, 'aria-hidden': true };
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

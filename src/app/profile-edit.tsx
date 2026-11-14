@@ -12,6 +12,7 @@ import { budgetLabel, cityLabel, serviceLabel, styleLabel, useT } from '../i18n'
 import { pickImage, uploadImage, type Bucket } from '../lib/media';
 import { BUDGET_RANGES, type BudgetRange } from '../lib/supabase';
 import { useApp } from '../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, radius, spacing } from '../theme';
 
 const MAX_STYLES = 3;
@@ -25,7 +26,7 @@ export default function ProfileEdit() {
   const { t } = useT();
   const router = useRouter();
   const auth = useAuth();
-  const { user, setUser } = useApp();
+  const { user, setUser } = useApp(useShallow((s) => ({ user: s.user, setUser: s.setUser })));
   const role = auth.enabled ? auth.profile?.role ?? 'customer' : 'customer';
   const p = auth.profile;
   const v = auth.vendor;

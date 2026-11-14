@@ -5,12 +5,13 @@ import { Badge, Button, EmptyState, Row, Screen, T, tap } from '../../components
 import { designName, useT } from '../../i18n';
 import { dateLabel, pkrShort } from '../../lib/format';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, radius, spacing } from '../../theme';
 
 export default function Designs() {
   const router = useRouter();
   const { t } = useT();
-  const { designs, resetDraft } = useApp();
+  const { designs, resetDraft } = useApp(useShallow((s) => ({ designs: s.designs, resetDraft: s.resetDraft })));
   const start = () => {
     resetDraft();
     router.push('/design/capture');

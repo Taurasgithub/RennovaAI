@@ -11,6 +11,7 @@ import { PALETTES, ROOM_TYPES, STYLES } from '../../data/catalog';
 import { budgetLabel, cityLabel, designName, projectTitle, roomLabel, styleBlurb, styleLabel, useT, type TKey } from '../../i18n';
 import { pkr } from '../../lib/format';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, spacing } from '../../theme';
 
 const WHY: { icon: 'eye-outline' | 'shield-checkmark-outline' | 'git-compare-outline' | 'lock-closed-outline'; title: TKey; body: TKey }[] = [
@@ -25,7 +26,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t, ur } = useT();
-  const { user, designs, projects, resetDraft, updateDraft, referralUsed } = useApp();
+  const { user, designs, projects, resetDraft, updateDraft, referralUsed } = useApp(useShallow((s) => ({ user: s.user, designs: s.designs, projects: s.projects, resetDraft: s.resetDraft, updateDraft: s.updateDraft, referralUsed: s.referralUsed })));
   const active = projects.find((p) => p.status === 'active');
 
   const firstName = user?.name?.split(' ')[0] ?? t('home.there');
@@ -102,7 +103,7 @@ export default function Home() {
       <Section title={t('home.renovating')} style={{ paddingHorizontal: spacing.lg }} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
         {ROOM_TYPES.map((r) => (
-          <Pressable key={r.id} onPress={() => { tap(); startDesign({ roomTypeId: r.id, area: r.defaultArea }); }} style={({ pressed }) => [styles.roomTile, pressed && { backgroundColor: colors.teal }]}>
+          <Pressable key={r.id} accessibilityRole="button" accessibilityLabel={roomLabel(r.id)} onPress={() => { tap(); startDesign({ roomTypeId: r.id, area: r.defaultArea }); }} style={({ pressed }) => [styles.roomTile, pressed && { backgroundColor: colors.teal }]}>
             {({ pressed }) => (
               <>
                 <Ionicons name={r.icon} size={26} color={pressed ? colors.white : colors.navy} />
@@ -163,7 +164,7 @@ export default function Home() {
             const pal = PALETTES[(STYLES.indexOf(s) * 3 + 1) % PALETTES.length];
             const fav = favouriteIds.includes(s.id);
             return (
-              <Pressable key={s.id} onPress={() => { tap(); startDesign({ styleId: s.id, paletteId: pal.id }); }} style={[styles.styleCard, fav && { borderColor: colors.teal, borderWidth: 1.5 }]}>
+              <Pressable key={s.id} accessibilityRole="button" onPress={() => { tap(); startDesign({ styleId: s.id, paletteId: pal.id }); }} style={[styles.styleCard, fav && { borderColor: colors.teal, borderWidth: 1.5 }]}>
                 <View style={{ height: 96 }}>
                   <RoomIllustration styleId={s.id} paletteId={pal.id} flooringId={s.id === 'luxury' ? 'marble' : s.id === 'scandinavian' ? 'laminate' : 'porcelain'} ceilingId={s.id === 'luxury' ? 'cove' : 'gypsum'} />
                   {fav && (

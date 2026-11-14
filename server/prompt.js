@@ -8,7 +8,7 @@ const STYLES = {
   traditional: 'traditional South Asian interior, carved wood furniture, rich textiles, jharokha-inspired details',
   scandinavian: 'scandinavian interior, light oak wood, cosy textiles, airy and bright',
   industrial: 'industrial loft interior, exposed textures, black metal accents, concrete tones',
-  luxury: 'luxury interior, marble surfaces, brushed gold accents, warm cove lighting',
+  luxury: 'luxury interior, marble on floors and wall cladding only, plush fabric or leather upholstery, brushed gold accents, warm cove lighting',
 };
 const PALETTES = {
   'sea-breeze': 'soft sea-green walls (#CFE8E3) with teal accents',
@@ -42,6 +42,7 @@ export function buildPrompt(c = {}) {
   if (c.notes) parts.push(`Customer request: ${String(c.notes).slice(0, 300)}.`);
   parts.push(
     'Keep the same camera angle, room geometry, windows, doors and ceiling height so the customer recognises their own room.',
+    'Furniture uses realistic upholstery and wood; stone or marble textures belong only on floors, walls and countertops, never on sofas, beds or cushions.',
     'Photorealistic interior photography, natural daylight, realistic materials achievable by local Pakistani contractors. No text, no watermarks, no people.',
   );
   return parts.join(' ');

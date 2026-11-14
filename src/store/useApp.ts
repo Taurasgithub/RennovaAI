@@ -1,9 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { DesignChoices, Estimate } from '../lib/estimate';
 import type { BudgetRange } from '../lib/supabase';
 import { uid } from '../lib/id';
+import { dropAllImages, dropImage } from '../lib/images';
+import { appStorage } from '../lib/storage';
 import type { ServiceType } from '../data/catalog';
 
 /** The signed-in person's profile as the customer screens see it (mirrors public.profiles when accounts are on). */
@@ -151,7 +152,12 @@ export const useApp = create<State & Actions>()(
         return id;
       },
       updateDesign: (id, p) => set({ designs: get().designs.map((d) => (d.id === id ? { ...d, ...p } : d)) }),
-      deleteDesign: (id) => set({ designs: get().designs.filter((d) => d.id !== id) }),
+      deleteDesign: (id) => {
+        const gone = get().designs.find((d) => d.id === id);
+        set({ designs: get().designs.filter((d) => d.id !== id) });
+        dropImage(gone?.photoUri);
+        dropImage(gone?.resultUri);
+      },
       createProject: (p, greeting) => {
         const id = uid();
         const now = new Date().toISOString();
@@ -194,11 +200,14 @@ export const useApp = create<State & Actions>()(
       submitVendorApplication: (a) => set({ vendorApplication: { ...a, submittedAt: new Date().toISOString(), step: 1 } }),
       markReferralUsed: () => set({ referralUsed: true }),
       claimStudentPack: () => set({ studentPackClaimed: true }),
-      resetAll: () => set({ ...initial, hydrated: true, draft: emptyDraft() }),
+      resetAll: () => {
+        set({ ...initial, hydrated: true, draft: emptyDraft() });
+        dropAllImages();
+      },
     }),
     {
       name: 'rennovaai-store-v1',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => appStorage),
       partialize: ({ hydrated, ...rest }) => rest,
       onRehydrateStorage: () => () => {
         useApp.setState({ hydrated: true });

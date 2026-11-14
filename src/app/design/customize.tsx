@@ -8,6 +8,7 @@ import { estimateCost } from '../../lib/estimate';
 import { pkrRangeShort } from '../../lib/format';
 import { ceilingLabel, extraLabel, floorLabel, paletteLabel, serviceLabel, styleBlurb, styleLabel, useT, wallLabel } from '../../i18n';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, radius, spacing } from '../../theme';
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
@@ -22,7 +23,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
 export default function Customize() {
   const router = useRouter();
   const { t } = useT();
-  const { draft, updateDraft, user } = useApp();
+  const { draft, updateDraft, user } = useApp(useShallow((s) => ({ draft: s.draft, updateDraft: s.updateDraft, user: s.user })));
   const est = estimateCost(draft, user?.city ?? 'Sukkur');
 
   const toggleExtra = (id: string) =>
@@ -54,7 +55,7 @@ export default function Customize() {
           {STYLES.map((s) => {
             const sel = draft.styleId === s.id;
             return (
-              <Pressable key={s.id} onPress={() => { tap(); updateDraft({ styleId: s.id }); }} style={[styles.styleCard, sel && styles.selected]}>
+              <Pressable key={s.id} accessibilityRole="radio" aria-checked={sel} onPress={() => { tap(); updateDraft({ styleId: s.id }); }} style={[styles.styleCard, sel && styles.selected]}>
                 <Row style={{ justifyContent: 'space-between' }}>
                   <View style={[styles.styleSwatch, { backgroundColor: s.furniture }]} />
                   {sel && <Ionicons name="checkmark-circle" size={20} color={colors.teal} />}
@@ -72,7 +73,7 @@ export default function Customize() {
           {PALETTES.map((p) => {
             const sel = draft.paletteId === p.id;
             return (
-              <Pressable key={p.id} accessibilityLabel={paletteLabel(p.id)} onPress={() => { tap(); updateDraft({ paletteId: p.id }); }} style={[styles.palette, sel && styles.selected]}>
+              <Pressable key={p.id} accessibilityRole="radio" aria-checked={sel} accessibilityLabel={paletteLabel(p.id)} onPress={() => { tap(); updateDraft({ paletteId: p.id }); }} style={[styles.palette, sel && styles.selected]}>
                 <View style={styles.paletteSwatch}>
                   <View style={{ flex: 3, backgroundColor: p.wall }} />
                   <View style={{ flex: 1, backgroundColor: p.accent }} />
@@ -113,7 +114,7 @@ export default function Customize() {
         {EXTRAS.map((x) => {
           const on = draft.extras.includes(x.id);
           return (
-            <Pressable key={x.id} onPress={() => { tap(); toggleExtra(x.id); }} style={[styles.extra, on && styles.selected]}>
+            <Pressable key={x.id} accessibilityRole="checkbox" aria-checked={on} onPress={() => { tap(); toggleExtra(x.id); }} style={[styles.extra, on && styles.selected]}>
               <Ionicons name={on ? 'checkbox' : 'square-outline'} size={22} color={on ? colors.teal : colors.textSubtle} />
               <T variant="bodyStrong" style={{ flex: 1 }}>{extraLabel(x.id)}</T>
               <Badge label={serviceLabel(x.service).toUpperCase()} tone="gray" />

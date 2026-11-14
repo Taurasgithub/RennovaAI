@@ -210,7 +210,7 @@ export function TabStrip<K extends string>({ items, value, onChange }: { items: 
       {items.map((it) => {
         const on = it.id === value;
         return (
-          <Pressable key={it.id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => { tap(); onChange(it.id); }} style={styles.stripItem}>
+          <Pressable key={it.id} accessibilityRole="tab" aria-selected={on} onPress={() => { tap(); onChange(it.id); }} style={styles.stripItem}>
             <Txt style={[styles.stripText, on && { color: colors.navy, fontFamily: fonts.extrabold }]}>{it.label}</Txt>
             <View style={[styles.stripBar, on && { backgroundColor: colors.teal }]} />
           </Pressable>
@@ -292,7 +292,7 @@ export function BrandTabBar({ state, descriptors, emitter, navigateToTab, dark, 
       if (!focused && !event.defaultPrevented) navigateToTab(route.key);
     };
     return (
-      <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label} onPress={onPress} style={styles.tab}>
+      <Pressable key={route.key} accessibilityRole="tab" aria-selected={focused} accessibilityLabel={label} onPress={onPress} style={styles.tab}>
         <View style={styles.iconWrap}>
           {focused && <House width={48} height={38} roof={13} color={onBg} style={StyleSheet.absoluteFill} />}
           <View style={{ marginTop: 6 }}>{options.tabBarIcon?.({ focused, color: focused ? onIcon : off, size: 22 })}</View>

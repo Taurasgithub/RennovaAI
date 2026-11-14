@@ -10,6 +10,7 @@ import { config } from '../config';
 import { pkr } from '../lib/format';
 import { designName, useT, type TKey } from '../i18n';
 import { useApp } from '../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, radius, spacing } from '../theme';
 
 const PERKS: ['infinite' | 'download-outline' | 'list-outline' | 'cube-outline', TKey, TKey][] = [
@@ -24,7 +25,7 @@ export default function Premium() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useT();
-  const { designs, updateDesign, studentPackClaimed, claimStudentPack } = useApp();
+  const { designs, updateDesign, studentPackClaimed, claimStudentPack } = useApp(useShallow((s) => ({ designs: s.designs, updateDesign: s.updateDesign, studentPackClaimed: s.studentPackClaimed, claimStudentPack: s.claimStudentPack })));
   const [selected, setSelected] = useState<string | undefined>(designId ?? designs.find((d) => !d.premium)?.id);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);

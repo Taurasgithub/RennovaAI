@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Alert, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { confirmAction } from '../../lib/dialogs';
 import { Badge, Button, Card, Chip, IconTile, Row, Screen, Section, T, tap, type IconName } from '../../components/ui';
 import { config } from '../../config';
 import { useAuth } from '../../auth/AuthProvider';
@@ -11,6 +12,7 @@ import { ProfileHeader } from '../../components/ProfileHeader';
 import { budgetLabel, cityLabel, styleLabel, useT } from '../../i18n';
 import { aiServerConfigured } from '../../services/ai';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, spacing } from '../../theme';
 
 function Item({ icon, label, detail, onPress }: { icon: IconName; label: string; detail?: string; onPress: () => void }) {
@@ -30,7 +32,7 @@ export default function Profile() {
   const router = useRouter();
   const { t } = useT();
   const auth = useAuth();
-  const { user, setUser, designs, projects, vendorApplication, resetAll, language, setLanguage } = useApp();
+  const { user, setUser, designs, projects, vendorApplication, resetAll, language, setLanguage } = useApp(useShallow((s) => ({ user: s.user, setUser: s.setUser, designs: s.designs, projects: s.projects, vendorApplication: s.vendorApplication, resetAll: s.resetAll, language: s.language, setLanguage: s.setLanguage })));
 
   // With accounts on, the city is saved to the account (which also updates the local copy).
   const setCity = (city: string) => {
@@ -40,12 +42,10 @@ export default function Profile() {
   };
 
   const reset = () => {
-    const go = () => {
+    confirmAction(t('profile.deleteTitle'), t('profile.deleteBody'), { cancel: t('common.cancel'), ok: t('common.delete') }, () => {
       resetAll();
       router.replace('/onboarding');
-    };
-    if (Platform.OS === 'web') go();
-    else Alert.alert(t('profile.deleteTitle'), t('profile.deleteBody'), [{ text: t('common.cancel'), style: 'cancel' }, { text: t('common.delete'), style: 'destructive', onPress: go }]);
+    }, true);
   };
 
   const prefs = user?.preferredStyles ?? [];

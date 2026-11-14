@@ -78,7 +78,7 @@ export function AccountSignIn() {
             <Pressable
               key={k}
               accessibilityRole="button"
-              accessibilityState={{ selected: on }}
+              aria-selected={on}
               onPress={() => {
                 tap();
                 setType(k);

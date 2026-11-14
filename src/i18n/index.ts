@@ -17,17 +17,30 @@ function fill(s: string, p?: Params) {
   return p ? s.replace(/\{(\w+)\}/g, (m, k: string) => (k in p ? String(p[k]) : m)) : s;
 }
 
+/** Count strings: when params.n is 1 and a `<key>.one` string exists, that singular form is used. */
+function pick(key: TKey, p?: Params): TKey {
+  const one = `${key}.one`;
+  return p?.n === 1 && one in en ? (one as TKey) : key;
+}
+
 export const currentLanguage = (): Language => useApp.getState().language;
 
 /** Translate outside React (helpers, formatters). Components should use useT() so they re-render on change. */
 export function translate(key: TKey, params?: Params, lang: Language = currentLanguage()) {
-  return fill(DICTS[lang][key] ?? en[key], params);
+  const k = pick(key, params);
+  return fill(DICTS[lang][k] ?? en[k], params);
 }
 
 /** t(key, params) for the active language; re-renders the caller when the language changes. */
 export function useT() {
   const lang = useApp((s) => s.language);
-  const t = useCallback((key: TKey, params?: Params) => fill(DICTS[lang][key] ?? en[key], params), [lang]);
+  const t = useCallback(
+    (key: TKey, params?: Params) => {
+      const k = pick(key, params);
+      return fill(DICTS[lang][k] ?? en[k], params);
+    },
+    [lang],
+  );
   return { t, lang, ur: lang === 'ur' };
 }
 

@@ -78,7 +78,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
           onToggle();
         }}
         accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
+        aria-expanded={open}
       >
         <Row>
           <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={40} bg={ROLE_COLOR[p.role]} color={p.role === 'vendor' ? colors.navy : colors.white} />
