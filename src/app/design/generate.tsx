@@ -6,9 +6,11 @@ import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, T } from '../../components/ui';
 import { estimateCost } from '../../lib/estimate';
+import { keepImage } from '../../lib/images';
 import { generateDesign } from '../../services/ai';
 import { designName, useT, type TKey } from '../../i18n';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, spacing } from '../../theme';
 
 const STEPS: TKey[] = ['generate.step1', 'generate.step2', 'generate.step3', 'generate.step4'];
@@ -17,7 +19,7 @@ export default function Generate() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t, lang } = useT();
-  const { draft, saveDesign, user, designs } = useApp();
+  const { draft, saveDesign, user, designs } = useApp(useShallow((s) => ({ draft: s.draft, saveDesign: s.saveDesign, user: s.user, designs: s.designs })));
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const spin = useRef(new Animated.Value(0)).current;
@@ -48,13 +50,15 @@ export default function Generate() {
     try {
       const [result] = await Promise.all([generateDesign(draft), new Promise((r) => setTimeout(r, 2600))]);
       const { photoUri, ...choices } = draft;
+      // Saved designs keep their own copies, so they outlive the picker's cache and browser reloads.
+      const [savedPhoto, savedResult] = await Promise.all([keepImage(photoUri), keepImage(result.uri)]);
       const nameParts = { styleId: draft.styleId, roomTypeId: draft.roomTypeId, n: designs.length + 1 };
       const id = saveDesign({
         name: designName({ name: '', nameParts }),
         nameParts,
         choices,
-        photoUri,
-        resultUri: result.uri,
+        photoUri: savedPhoto,
+        resultUri: savedResult,
         resultMode: result.mode,
         regenerations: 0,
         premium: false,

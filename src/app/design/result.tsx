@@ -1,23 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, ScrollView, Share, View } from 'react-native';
+import { ScrollView, Share, View } from 'react-native';
 import { DesignCompare } from '../../components/DesignPreview';
 import { Badge, Button, Card, Chip, Divider, EmptyState, IconButton, IconTile, Row, Screen, T } from '../../components/ui';
 import { config } from '../../config';
+import { confirmAction, notify } from '../../lib/dialogs';
+import { dropImage, keepImage } from '../../lib/images';
 import { PALETTES } from '../../data/catalog';
 import { ceilingLabel, cityLabel, designName, extraLabel, floorLabel, lineLabel, listJoin, paletteLabel, roomLabel, styleLabel, useT, wallLabel } from '../../i18n';
 import { estimateCost } from '../../lib/estimate';
 import { pkr } from '../../lib/format';
 import { generateDesign } from '../../services/ai';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, spacing } from '../../theme';
 
 export default function Result() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useT();
-  const { designs, updateDesign, deleteDesign, user } = useApp();
+  const { designs, updateDesign, deleteDesign, user } = useApp(useShallow((s) => ({ designs: s.designs, updateDesign: s.updateDesign, deleteDesign: s.deleteDesign, user: s.user })));
   const design = designs.find((d) => d.id === id);
   const [busy, setBusy] = useState(false);
 
@@ -37,22 +40,25 @@ export default function Result() {
     setBusy(true);
     try {
       const res = await generateDesign({ ...choices, photoUri: design.photoUri }, design.regenerations + 1);
+      const resultUri = await keepImage(res.uri);
+      const previous = design.resultUri;
       updateDesign(design.id, {
         choices,
-        resultUri: res.uri,
+        resultUri,
         resultMode: res.mode,
         estimate: estimateCost(choices, city),
         regenerations: design.regenerations + (countsAsRegen ? 1 : 0),
       });
-    } catch (e) {
-      Alert.alert(t('result.regenFail'), t('common.tryAgain'));
+      if (previous !== resultUri) dropImage(previous);
+    } catch {
+      notify(t('result.regenFail'), t('common.tryAgain'));
     } finally {
       setBusy(false);
     }
   };
 
   const summary: [string, string][] = [
-    [t('result.room'), `${roomLabel(c.roomTypeId)} · ${t('common.sqft', { n: c.area })}`],
+    [t('result.room'), `${roomLabel(c.roomTypeId)} · ${c.lengthFt && c.widthFt ? `${c.lengthFt} × ${c.widthFt} ft · ` : ''}${t('common.sqft', { n: c.area })}`],
     [t('result.style'), styleLabel(c.styleId)],
     [t('result.palette'), paletteLabel(c.paletteId)],
     [t('result.walls'), wallLabel(c.wallFinishId)],
@@ -90,6 +96,14 @@ export default function Result() {
         <T variant="small" style={{ marginTop: spacing.sm }}>
           {t('result.previewNote')}
         </T>
+      )}
+      {/* The sample room is drawn on the phone; only the customer's own photo goes to the AI. */}
+      {design.resultMode === 'illustration' && (
+        <Card style={{ marginTop: spacing.md, backgroundColor: colors.amberTint, borderColor: colors.amberTint }}>
+          <T variant="bodyStrong" style={{ color: colors.navy }}>{t('result.sampleTitle')}</T>
+          <T variant="small" style={{ marginTop: 4, color: colors.text }}>{t('result.sampleBody')}</T>
+          <Button title={t('result.sampleCta')} kind="navy" icon="camera" small style={{ marginTop: spacing.md, alignSelf: 'flex-start' }} onPress={() => router.push('/design/capture')} />
+        </Card>
       )}
 
       <T variant="h2" style={{ marginTop: spacing.xl }}>{t('result.tweaks')}</T>
@@ -170,12 +184,10 @@ export default function Result() {
         small
         style={{ marginTop: spacing.xl }}
         onPress={() => {
-          const go = () => {
+          confirmAction(t('result.deleteTitle'), t('result.deleteBody'), { cancel: t('common.cancel'), ok: t('common.delete') }, () => {
             deleteDesign(design.id);
             router.back();
-          };
-          if (Platform.OS === 'web') go();
-          else Alert.alert(t('result.deleteTitle'), t('result.deleteBody'), [{ text: t('common.cancel'), style: 'cancel' }, { text: t('common.delete'), style: 'destructive', onPress: go }]);
+          }, true);
         }}
       />
     </Screen>

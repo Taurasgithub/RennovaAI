@@ -1,7 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Linking, StyleSheet, TextInput, View } from 'react-native';
 import { HouseBar, Marker } from '../../components/brand';
+import { confirmAction as confirm } from '../../lib/dialogs';
 import { DesignCompare } from '../../components/DesignPreview';
 import { VendorAvatar } from '../../components/VendorCard';
 import { Badge, Button, Card, EmptyState, IconButton, Row, Screen, Section, Stars, T } from '../../components/ui';
@@ -10,18 +11,15 @@ import { getVendor } from '../../data/vendors';
 import { dateLabel, pkr } from '../../lib/format';
 import { milestoneTitle, paymentLabel, projectTitle, useT } from '../../i18n';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, radius, spacing } from '../../theme';
 
-const confirm = (title: string, body: string, labels: { cancel: string; ok: string }, onOk: () => void) => {
-  if (Platform.OS === 'web') return onOk();
-  Alert.alert(title, body, [{ text: labels.cancel, style: 'cancel' }, { text: labels.ok, onPress: onOk }]);
-};
 
 export default function ProjectScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useT();
-  const { projects, designs, depositMilestone, releaseMilestone, rateProject, addMessage } = useApp();
+  const { projects, designs, depositMilestone, releaseMilestone, rateProject, addMessage } = useApp(useShallow((s) => ({ projects: s.projects, designs: s.designs, depositMilestone: s.depositMilestone, releaseMilestone: s.releaseMilestone, rateProject: s.rateProject, addMessage: s.addMessage })));
   const project = projects.find((p) => p.id === id);
   const [stars, setStars] = useState(5);
   const [review, setReview] = useState('');

@@ -9,6 +9,7 @@ import { getVendor } from '../../data/vendors';
 import { pkr, roundTo, uid } from '../../lib/format';
 import { availabilityLabel, designName, useT, type TKey } from '../../i18n';
 import { useApp, type Milestone } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, radius, spacing } from '../../theme';
 
 const PLAN = [
@@ -31,7 +32,7 @@ export default function Book() {
   const router = useRouter();
   const { t } = useT();
   const vendor = getVendor(p.vendorId);
-  const { designs, referralUsed, markReferralUsed, createProject } = useApp();
+  const { designs, referralUsed, markReferralUsed, createProject } = useApp(useShallow((s) => ({ designs: s.designs, referralUsed: s.referralUsed, markReferralUsed: s.markReferralUsed, createProject: s.createProject })));
   const design = designs.find((d) => d.id === p.designId);
   const [start, setStart] = useState('This week');
   const [method, setMethod] = useState('jazzcash');

@@ -8,12 +8,13 @@ import { getVendor } from '../../data/vendors';
 import { projectTitle, useT } from '../../i18n';
 import { pkr } from '../../lib/format';
 import { useApp } from '../../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, spacing } from '../../theme';
 
 export default function Projects() {
   const router = useRouter();
   const { t } = useT();
-  const { projects, designs, resetDraft } = useApp();
+  const { projects, designs, resetDraft } = useApp(useShallow((s) => ({ projects: s.projects, designs: s.designs, resetDraft: s.resetDraft })));
 
   return (
     <Screen back={false} title={t('projects.title')}>

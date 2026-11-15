@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { useT, type TKey } from '../i18n';
 import type { Role } from '../lib/supabase';
 import { useApp } from '../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, spacing } from '../theme';
 import { Badge, Button, Card, Chip, Row, Section, T } from './ui';
 
@@ -16,7 +17,7 @@ export function AccountPanel({ showLanguage = true }: { showLanguage?: boolean }
   const { t } = useT();
   const router = useRouter();
   const { profile, signOut } = useAuth();
-  const { language, setLanguage } = useApp();
+  const { language, setLanguage } = useApp(useShallow((s) => ({ language: s.language, setLanguage: s.setLanguage })));
   const [busy, setBusy] = useState(false);
   if (!profile) return null;
 

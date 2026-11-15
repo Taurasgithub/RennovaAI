@@ -130,7 +130,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: !!off }}
+      aria-disabled={!!off}
       onPress={() => {
         if (off) return;
         tap();
@@ -180,6 +180,7 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
   if (onPress)
     return (
       <Pressable
+        accessibilityRole="button"
         onPress={() => {
           tap();
           onPress();
@@ -269,12 +270,14 @@ export function Screen({
 }
 
 export function Section({ title, action, onAction, children, style }: { title: string; action?: string; onAction?: () => void; children?: ReactNode; style?: StyleProp<ViewStyle> }) {
+  const { ur } = useT();
   return (
     <View style={[{ marginTop: spacing.xxl }, style]}>
-      <View style={styles.sectionHead}>
+      {/* Urdu reads right to left: heading on the right, its action on the left. */}
+      <View style={[styles.sectionHead, ur && { flexDirection: 'row-reverse' }]}>
         <T variant="h2" style={{ fontFamily: fonts.extrabold, fontSize: 18, letterSpacing: -0.3 }}>{title}</T>
         {action && (
-          <Pressable onPress={onAction} hitSlop={8}>
+          <Pressable onPress={onAction} hitSlop={8} accessibilityRole="button">
             <T variant="small" style={{ color: colors.tealDark, fontFamily: fonts.bold, fontSize: 13 }}>
               {action}
             </T>
@@ -292,7 +295,7 @@ export function Chip({ label, selected, onPress, icon, color }: { label: string;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected: !!selected }}
+      aria-selected={!!selected}
       onPress={() => {
         tap();
         onPress?.();

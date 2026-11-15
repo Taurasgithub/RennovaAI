@@ -14,6 +14,7 @@ import { Badge, Row, T, tap, Txt } from '../components/ui';
 import { config } from '../config';
 import { cityLabel, useT, type TKey } from '../i18n';
 import { useApp } from '../store/useApp';
+import { useShallow } from 'zustand/react/shallow';
 import { colors, fonts, radius, shadow, spacing } from '../theme';
 
 const MAX_WIDTH = 520;
@@ -302,7 +303,7 @@ function Profile({ name, setName, phone, setPhone, city, setCity }: { name: stri
             <Pressable
               key={ct}
               accessibilityRole="button"
-              accessibilityState={{ selected: on }}
+              aria-selected={on}
               onPress={() => {
                 tap();
                 setCity(ct);
@@ -326,7 +327,7 @@ export default function Onboarding() {
   const { width: windowWidth } = useWindowDimensions();
   const { t, ur } = useT();
   const auth = useAuth();
-  const { setUser, completeOnboarding, user } = useApp();
+  const { setUser, completeOnboarding, user } = useApp(useShallow((s) => ({ setUser: s.setUser, completeOnboarding: s.completeOnboarding, user: s.user })));
   const params = useLocalSearchParams<{ step?: string }>();
   const [step, setStep] = useState(params.step === 'profile' ? PROFILE : 0);
   const [name, setName] = useState(user?.name ?? '');

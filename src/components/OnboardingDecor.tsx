@@ -1,10 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { G, Line, Path, Rect } from 'react-native-svg';
 import { colors } from '../theme';
 
 /** Soft mint wash, corner blobs, faint house outlines and potted-plant leaves behind the onboarding screen. */
-export function Backdrop({ houses = 'both', houseTop = '51%' }: { houses?: 'both' | 'right' | 'none'; houseTop?: `${number}%` }) {
+/** Memoised: it is pure decoration and would otherwise redraw on every onboarding slide change. */
+export const Backdrop = memo(function Backdrop({ houses = 'both', houseTop = '51%' }: { houses?: 'both' | 'right' | 'none'; houseTop?: `${number}%` }) {
   return (
     // overflow hidden: the corner blobs sit partly off-screen and must not widen the page on web.
     <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">
@@ -18,7 +20,7 @@ export function Backdrop({ houses = 'both', houseTop = '51%' }: { houses?: 'both
       <Leaves style={{ position: 'absolute', right: -6, bottom: -4, transform: [{ scaleX: -1 }] }} />
     </View>
   );
-}
+});
 
 function HouseOutline({ style }: { style: object }) {
   return (

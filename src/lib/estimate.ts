@@ -5,6 +5,9 @@ import { roundTo } from './format';
 export type DesignChoices = {
   roomTypeId: string;
   area: number; // floor area sq ft
+  /** Optional room size in feet; when both are set, area = length × width and walls use the real perimeter. */
+  lengthFt?: number;
+  widthFt?: number;
   styleId: string;
   paletteId: string;
   wallFinishId: string;
@@ -52,8 +55,9 @@ export function estimateCost(c: DesignChoices, city: string): Estimate {
   const floor = findById(FLOORING, c.flooringId);
   const ceiling = findById(CEILINGS, c.ceilingId);
   const cityF = CITY_FACTOR[city] ?? 1;
-  const side = Math.sqrt(Math.max(c.area, 20));
-  const wallArea = Math.round(side * 4 * CEILING_HEIGHT_FT * 0.85); // minus ~15% for doors & windows
+  // Real perimeter when the customer gave length and width; otherwise assume a square room of that area.
+  const perimeter = c.lengthFt && c.widthFt ? 2 * (c.lengthFt + c.widthFt) : 4 * Math.sqrt(Math.max(c.area, 20));
+  const wallArea = Math.round(perimeter * CEILING_HEIGHT_FT * 0.85); // minus ~15% for doors & windows
 
   const lines: EstimateLine[] = [];
   lines.push({ label: `Walls · ${wall.label} (${wallArea} sq ft)`, amount: wallArea * wall.rate, service: 'Painter', part: 'walls', ref: wall.id, qty: wallArea });
