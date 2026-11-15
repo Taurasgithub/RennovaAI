@@ -1,104 +1,84 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
+import { useAuth } from '../../auth/AuthProvider';
 import { DesignThumb } from '../../components/DesignPreview';
-import { Badge, Button, Card, Chip, Divider, EmptyState, IconTile, Row, Screen, T, tap } from '../../components/ui';
-import { config } from '../../config';
+import { Badge, Button, Card, Chip, EmptyState, IconTile, Row, Screen, T } from '../../components/ui';
 import { getVendor } from '../../data/vendors';
-import { pkr, roundTo, uid } from '../../lib/format';
-import { availabilityLabel, designName, useT, type TKey } from '../../i18n';
-import { useApp, type Milestone } from '../../store/useApp';
-import { useShallow } from 'zustand/react/shallow';
+import { availabilityLabel, designName, milestoneTitle, useT } from '../../i18n';
+import { notify } from '../../lib/dialogs';
+import { pkr, roundTo } from '../../lib/format';
+import { useBookings } from '../../services/bookings';
+import { ensureSynced } from '../../services/designSync';
+import { useApp } from '../../store/useApp';
 import { colors, fonts, radius, spacing } from '../../theme';
 
-const PLAN = [
-  { title: 'Mobilisation & materials', pct: 0.3 },
-  { title: 'Mid-work inspection', pct: 0.4 },
-  { title: 'Completion & handover', pct: 0.3 },
-];
-
-const METHODS: { id: string; label: TKey; icon: 'phone-portrait-outline' | 'wallet-outline' | 'card-outline' }[] = [
-  { id: 'jazzcash', label: 'book.method.jazzcash', icon: 'phone-portrait-outline' },
-  { id: 'easypaisa', label: 'book.method.easypaisa', icon: 'wallet-outline' },
-  { id: 'card', label: 'book.method.card', icon: 'card-outline' },
-];
+const STAGE_PCTS = [0.3, 0.4, 0.3];
 
 // Values match the vendor sample data so availabilityLabel() can translate them.
 const START_OPTIONS = ['Tomorrow', 'This week', 'Next week', 'Flexible'];
 
+/**
+ * Request a booking. No money moves through the app: the vendor accepts or declines, marks each
+ * stage done, the customer confirms it, and the customer pays the vendor directly.
+ */
 export default function Book() {
   const p = useLocalSearchParams<{ vendorId: string; designId: string; price: string; days: string }>();
   const router = useRouter();
   const { t } = useT();
+  const auth = useAuth();
   const vendor = getVendor(p.vendorId);
-  const { designs, referralUsed, markReferralUsed, createProject } = useApp(useShallow((s) => ({ designs: s.designs, referralUsed: s.referralUsed, markReferralUsed: s.markReferralUsed, createProject: s.createProject })));
-  const design = designs.find((d) => d.id === p.designId);
+  const design = useApp((s) => s.designs.find((d) => d.id === p.designId));
+  const request = useBookings((s) => s.request);
   const [start, setStart] = useState('This week');
-  const [method, setMethod] = useState('jazzcash');
-  const [code, setCode] = useState('');
-  const [applied, setApplied] = useState(false);
-  const [codeError, setCodeError] = useState('');
+  const [note, setNote] = useState('');
   const [agree, setAgree] = useState(false);
-  const [paying, setPaying] = useState(false);
+  const [sending, setSending] = useState(false);
 
   if (!vendor || !design) return <Screen title={t('book.screenTitle')}><EmptyState icon="alert-circle-outline" title={t('book.unavailableTitle')} body={t('book.unavailableBody')} /></Screen>;
+  if (!vendor.account) return <Screen title={t('book.screenTitle')}><EmptyState icon="information-circle-outline" title={t('book.sampleTitle')} body={t('book.sampleBody')} /></Screen>;
+  if (!auth.session) return <Screen title={t('book.screenTitle')}><EmptyState icon="person-circle-outline" title={t('book.needAccount')} body={t('book.needAccountBody')} /></Screen>;
 
   const price = Number(p.price) || design.estimate.mid;
   const days = Number(p.days) || design.estimate.days;
-  const discount = applied ? config.referralDiscount : 0;
-  const total = price - discount;
   const name = designName(design);
-  const milestones: Milestone[] = PLAN.map((m, i) => ({
-    id: uid(),
-    title: m.title,
-    stage: i,
-    pct: m.pct,
-    amount: i === PLAN.length - 1 ? total - PLAN.slice(0, -1).reduce((s, x) => s + roundTo(total * x.pct, 100), 0) : roundTo(total * m.pct, 100),
-    status: i === 0 ? 'in_escrow' : 'awaiting_deposit',
-  }));
+  const amounts = [roundTo(price * STAGE_PCTS[0], 100), roundTo(price * STAGE_PCTS[1], 100)];
+  amounts.push(price - amounts[0] - amounts[1]);
 
-  const applyCode = () => {
-    if (code.trim().toUpperCase() === config.referralCode && !referralUsed) {
-      setApplied(true);
-      setCodeError('');
-    } else setCodeError(referralUsed ? t('book.codeUsed') : t('book.codeInvalid'));
-  };
-
-  const pay = async () => {
-    setPaying(true);
-    // TODO(go-live): call the payments API (JazzCash / Easypaisa / card gateway) to place the deposit in escrow.
-    await new Promise((r) => setTimeout(r, 1500));
-    if (applied) markReferralUsed();
-    const id = createProject(
-      {
-        designId: design.id,
+  const send = async () => {
+    setSending(true);
+    try {
+      const { photoPath, resultPath } = await ensureSynced(design.id);
+      const id = await request({
         vendorId: vendor.id,
+        designId: design.id,
+        design: {
+          name: design.name,
+          nameParts: design.nameParts ?? null,
+          choices: design.choices,
+          estimate: design.estimate,
+          photo_path: photoPath,
+          result_path: resultPath,
+          result_mode: design.resultMode,
+        },
         title: name,
         price,
-        discount,
         days,
-        paymentMethod: method,
-        milestones,
-      },
-      t('chat.greeting', { title: name }),
-    );
-    setPaying(false);
-    router.replace(`/project/${id}`);
+        start,
+        note: note.trim(),
+      });
+      router.replace(`/project/${id}`);
+    } catch (e) {
+      notify(t('book.failed'), e instanceof Error ? e.message : undefined);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
     <Screen
       title={t('book.title')}
-      footer={
-        <View>
-          <Row style={{ justifyContent: 'space-between', marginBottom: spacing.sm }}>
-            <T variant="small">{t('book.due')}</T>
-            <T variant="h3" style={{ color: colors.navy }}>{pkr(milestones[0].amount)}</T>
-          </Row>
-          <Button title={paying ? t('book.processing') : t('book.deposit', { amount: pkr(milestones[0].amount) })} icon="lock-closed" loading={paying} disabled={!agree} onPress={pay} />
-        </View>
-      }
+      footer={<Button title={sending ? t('book.sending') : t('book.send')} icon="paper-plane-outline" loading={sending} disabled={!agree} onPress={send} />}
     >
       <Card style={{ marginTop: spacing.sm }}>
         <Row gap={spacing.md}>
@@ -108,9 +88,13 @@ export default function Book() {
             <T variant="small">{vendor.name}</T>
             <Row style={{ marginTop: 4 }} gap={6}>
               <Badge label={t('common.daysUpper', { n: days })} tone="navy" icon="time-outline" />
-              <Badge label={t('common.verified')} tone="teal" icon="shield-checkmark" />
+              {vendor.verified && <Badge label={t('common.verified')} tone="teal" icon="shield-checkmark" />}
             </Row>
           </View>
+        </Row>
+        <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
+          <T variant="small">{t('book.price')}</T>
+          <T variant="h3" style={{ color: colors.navy }}>{pkr(price)}</T>
         </Row>
       </Card>
 
@@ -120,72 +104,48 @@ export default function Book() {
       </Row>
       <T variant="caption" style={{ marginTop: 6 }}>{t('book.confirmDate', { vendor: vendor.name })}</T>
 
-      <T variant="h2" style={{ marginTop: spacing.xl }}>{t('book.escrow')}</T>
+      <T variant="h2" style={{ marginTop: spacing.xl }}>{t('book.note')}</T>
+      <TextInput
+        value={note}
+        onChangeText={setNote}
+        placeholder={t('book.notePh')}
+        placeholderTextColor={colors.textSubtle}
+        multiline
+        maxLength={1000}
+        style={styles.note}
+      />
+
+      <T variant="h2" style={{ marginTop: spacing.xl }}>{t('book.stages')}</T>
       <Card style={{ marginTop: spacing.md }}>
-        {milestones.map((m, i) => (
-          <Row key={m.id} style={[{ paddingVertical: spacing.sm }, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
-            <View style={[styles.num, i === 0 && { backgroundColor: colors.amber }]}>
-              <T style={{ fontFamily: fonts.bold, color: i === 0 ? colors.navyDeep : colors.white, fontSize: 12 }}>{i + 1}</T>
-            </View>
+        {amounts.map((amount, i) => (
+          <Row key={i} style={[{ paddingVertical: spacing.sm }, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border }]}>
+            <View style={styles.num}><T style={{ fontFamily: fonts.bold, color: colors.white, fontSize: 12 }}>{i + 1}</T></View>
             <View style={{ flex: 1 }}>
-              <T variant="bodyStrong">{t(`milestone.${i}` as TKey)}</T>
-              <T variant="caption">{Math.round(m.pct * 100)}% · {i === 0 ? t('book.depositedToday') : t('book.depositLater')}</T>
+              <T variant="bodyStrong">{milestoneTitle(i)}</T>
+              <T variant="caption">{Math.round(STAGE_PCTS[i] * 100)}%</T>
             </View>
-            <T variant="bodyStrong">{pkr(m.amount)}</T>
+            <T variant="bodyStrong">{pkr(amount)}</T>
           </Row>
         ))}
       </Card>
-      <Row style={{ marginTop: spacing.md, alignItems: 'flex-start' }}>
-        <IconTile icon="shield-checkmark" size={34} />
-        <T variant="small" style={{ flex: 1 }}>
-          {t('book.escrowNote')}
-        </T>
-      </Row>
 
-      <T variant="h2" style={{ marginTop: spacing.xl }}>{t('book.promo')}</T>
-      <Row style={{ marginTop: spacing.md }}>
-        <TextInput
-          value={code}
-          onChangeText={(t) => { setCode(t); setCodeError(''); }}
-          placeholder={referralUsed ? t('book.enterCode') : t('book.tryCode', { code: config.referralCode })}
-          placeholderTextColor={colors.textSubtle}
-          autoCapitalize="characters"
-          editable={!applied}
-          style={styles.input}
-        />
-        <Button title={applied ? t('book.applied') : t('book.apply')} kind={applied ? 'secondary' : 'navy'} small icon={applied ? 'checkmark' : undefined} onPress={applyCode} disabled={applied || !code} />
-      </Row>
-      {!!codeError && <T variant="caption" style={{ color: colors.danger, marginTop: 4 }}>{codeError}</T>}
-
-      <T variant="h2" style={{ marginTop: spacing.xl }}>{t('book.payWith')}</T>
-      {METHODS.map((m) => (
-        <Pressable key={m.id} onPress={() => { tap(); setMethod(m.id); }} style={[styles.method, method === m.id && styles.methodOn]}>
-          <Ionicons name={m.icon} size={22} color={colors.navy} />
-          <T variant="bodyStrong" style={{ flex: 1 }}>{t(m.label)}</T>
-          <Ionicons name={method === m.id ? 'radio-button-on' : 'radio-button-off'} size={22} color={method === m.id ? colors.teal : colors.textSubtle} />
-        </Pressable>
+      <T variant="h2" style={{ marginTop: spacing.xl }}>{t('book.how')}</T>
+      {(['book.how1', 'book.how2', 'book.how3'] as const).map((k, i) => (
+        <Row key={k} style={{ marginTop: spacing.md, alignItems: 'flex-start' }}>
+          <IconTile icon={i === 0 ? 'checkmark-circle-outline' : i === 1 ? 'construct-outline' : 'cash-outline'} size={34} />
+          <T variant="small" style={{ flex: 1 }}>{t(k, { vendor: vendor.name })}</T>
+        </Row>
       ))}
 
-      <Card style={{ marginTop: spacing.xl }}>
-        <Row style={{ justifyContent: 'space-between' }}><T variant="small">{t('book.vendorQuote')}</T><T variant="bodyStrong">{pkr(price)}</T></Row>
-        {applied && <Row style={{ justifyContent: 'space-between', marginTop: 6 }}><T variant="small">{t('book.referral')}</T><T variant="bodyStrong" style={{ color: colors.success }}>− {pkr(discount)}</T></Row>}
-        <Row style={{ justifyContent: 'space-between', marginTop: 6 }}><T variant="small">{t('book.fee')}</T><T variant="bodyStrong" style={{ color: colors.success }}>{t('book.feeFree')}</T></Row>
-        <Divider />
-        <Row style={{ justifyContent: 'space-between' }}><T variant="bodyStrong">{t('book.total')}</T><T variant="h3" style={{ color: colors.navy }}>{pkr(total)}</T></Row>
-      </Card>
-
-      <Pressable onPress={() => { tap(); setAgree(!agree); }} style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.lg, alignItems: 'flex-start' }}>
-        <Ionicons name={agree ? 'checkbox' : 'square-outline'} size={22} color={agree ? colors.teal : colors.textSubtle} />
-        <T variant="small" style={{ flex: 1 }}>{t('book.agree')}</T>
-      </Pressable>
-      <T variant="caption" style={{ marginTop: spacing.md }}>{t('book.testMode')}</T>
+      <Row style={{ marginTop: spacing.xl, alignItems: 'flex-start' }}>
+        <Chip label={agree ? '✓' : ' '} selected={agree} onPress={() => setAgree(!agree)} />
+        <T variant="small" style={{ flex: 1 }} onPress={() => setAgree(!agree)}>{t('book.agree')}</T>
+      </Row>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   num: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.tealDeep, alignItems: 'center', justifyContent: 'center' },
-  input: { flex: 1, height: 44, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, paddingHorizontal: spacing.md, fontFamily: fonts.semibold, color: colors.text },
-  method: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.lg, borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.white, marginTop: spacing.sm },
-  methodOn: { borderColor: colors.teal, backgroundColor: colors.tealMist },
+  note: { minHeight: 90, marginTop: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white, padding: spacing.md, fontFamily: fonts.medium, color: colors.text, textAlignVertical: 'top' },
 });

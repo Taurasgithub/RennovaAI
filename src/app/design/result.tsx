@@ -33,7 +33,8 @@ export default function Result() {
 
   const applyChange = async (patch: Partial<typeof c>, countsAsRegen: boolean) => {
     if (countsAsRegen && remaining <= 0) {
-      router.push({ pathname: '/premium', params: { designId: design.id } });
+      if (config.premiumEnabled) router.push({ pathname: '/premium', params: { designId: design.id } });
+      else notify(t('result.regensUsedTitle'), t('result.regensUsed'));
       return;
     }
     const choices = { ...c, ...patch };
@@ -139,7 +140,8 @@ export default function Result() {
         <Button title={t('result.breakdown')} kind="ghost" iconRight="chevron-forward" small onPress={() => router.push({ pathname: '/design/estimate', params: { id: design.id } })} style={{ alignSelf: 'flex-start', marginTop: spacing.sm, paddingHorizontal: 0 }} />
       </Card>
 
-      {!design.premium ? (
+      {/* Without a paid pack (see config.premiumEnabled) everyone gets the shopping list. */}
+      {!design.premium && config.premiumEnabled ? (
         <Card style={{ marginTop: spacing.lg, backgroundColor: colors.navy }} onPress={() => router.push({ pathname: '/premium', params: { designId: design.id } })}>
           <Row>
             <IconTile icon="diamond" bg="rgba(254,169,35,0.18)" color={colors.amber} />

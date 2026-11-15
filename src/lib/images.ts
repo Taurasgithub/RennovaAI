@@ -32,6 +32,29 @@ export async function keepImage(uri: string | null): Promise<string | null> {
   return file.uri;
 }
 
+/** The raw bytes of a stored image (file or data URI), for uploading. */
+export async function readImageBytes(uri: string): Promise<Uint8Array> {
+  if (Platform.OS !== 'web' && uri.startsWith('file:')) return new File(uri).bytes();
+  return new Uint8Array(await (await fetch(uri)).arrayBuffer());
+}
+
+/** Downloads an image (e.g. a signed Supabase URL) so it is stored like a locally created one. */
+export async function saveRemoteImage(url: string): Promise<string> {
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(url)).blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  }
+  const dir = folder();
+  dir.create({ intermediates: true, idempotent: true });
+  const file = await File.downloadFileAsync(url, new File(dir, `${uid()}.jpg`));
+  return file.uri;
+}
+
 /** Deletes a stored image file (phone only; web images are part of the store and go with it). */
 export function dropImage(uri: string | null | undefined) {
   if (!uri || !ours(uri)) return;

@@ -25,6 +25,9 @@ In **SQL Editor → New query**, run each file once, in order:
 1. [`migrations/0001_accounts.sql`](migrations/0001_accounts.sql): accounts, roles, vendor applications.
 2. [`migrations/0002_profiles.sql`](migrations/0002_profiles.sql): personalised profiles (photo, bio, customer preferences, admin job title, vendor business profile) and the `avatars` / `vendor-media` photo buckets. Users can only upload into their own folder.
 3. [`migrations/0003_social_signin.sql`](migrations/0003_social_signin.sql): Google/Apple users still complete the profile step (their name is pre-filled) and their provider photo becomes the starting profile photo.
+4. [`migrations/0004_projects.sql`](migrations/0004_projects.sql): saved designs (synced from the phone) and their private `designs` photo bucket; bookings, work stages and chat; public vendor ratings; and `delete_my_account()` for in-app account deletion (required by Google Play). It also turns on live updates (Realtime) for bookings and chat.
+
+   Bookings are request-based and no money moves through the app. The customer sends a request, the vendor accepts or declines it, the vendor marks each of the 3 stages done, and the customer confirms each one and pays the vendor directly. Every change goes through a database function that checks who is calling; users cannot edit these tables directly.
 
 ## 3. Auth settings
 **Authentication → URL Configuration**
@@ -110,6 +113,11 @@ Promote other admins from **Admin → Users**. To demote someone:
 update public.profiles set role = 'customer' where email = 'someone@example.com';
 ```
 
-## What is stored where (this version)
-- **Supabase**: accounts (email, Google, Apple), roles, suspended status, personal profiles and photos, vendor applications, verification/approval and vendor business profiles.
-- **Still on the device**: customer designs, cost estimates, bookings, escrow milestones and chat (signing out clears them from the device). Moving these to Supabase is the next step.
+## What is stored where
+- **Supabase**:
+  - Accounts (email, Google, Apple), roles and suspended status.
+  - Profiles and photos.
+  - Vendor applications and business profiles.
+  - Saved designs, with their photos and AI previews in a private bucket.
+  - Bookings, work stages, chat, ratings and reviews.
+- **On the phone**: a working copy of the designs, the current draft and the language. Signing out clears the phone's copy; it is downloaded again on the next sign-in.

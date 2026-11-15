@@ -7,7 +7,7 @@ import { Badge, Chip, EmptyState, Row, Screen, T } from '../../components/ui';
 import { config } from '../../config';
 import { SERVICE_ICONS, SERVICE_TYPES, type ServiceType } from '../../data/catalog';
 import { useMarketplace } from '../../data/marketplace';
-import { VENDORS } from '../../data/vendors';
+import { sampleVendors } from '../../data/vendors';
 import { cityLabel, serviceLabel, useT } from '../../i18n';
 import { useApp } from '../../store/useApp';
 import { colors, fonts, radius, spacing } from '../../theme';
@@ -29,7 +29,7 @@ export default function Vendors() {
 
   const list = useMemo(
     () =>
-      [...accountVendors, ...VENDORS].filter((v) => v.city === city)
+      [...accountVendors, ...sampleVendors()].filter((v) => v.city === city)
         .filter((v) => !service || v.services.includes(service))
         .filter((v) => !q || [v.name, v.area, ...v.services, ...v.services.map(serviceLabel)].join(' ').toLowerCase().includes(q.toLowerCase()))
         .sort((a, b) => Number(b.pro) - Number(a.pro) || b.rating - a.rating),

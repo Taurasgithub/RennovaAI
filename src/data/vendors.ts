@@ -1,8 +1,9 @@
 import type { ServiceType } from './catalog';
+import { accountsEnabled } from '../lib/supabase';
 import { useMarketplace } from './marketplace';
 
-// SAMPLE LISTINGS for the beta build. Replace with the vendor API once vendors
-// are onboarded and verified (see README → "Going live").
+// SAMPLE LISTINGS, shown only in on-device demo mode (no Supabase configured). With accounts on,
+// the marketplace lists real approved vendor accounts only (data/marketplace.ts).
 
 export type PortfolioItem = { title: string; paletteId: string; styleId: string; flooringId: string; ceilingId: string };
 export type Review = { name: string; rating: number; text: string; date: string };
@@ -178,7 +179,10 @@ export const VENDORS: Vendor[] = [
   },
 ];
 
-/** Real (approved) vendor accounts first, then the sample listings. */
-export const allVendors = (): Vendor[] => [...useMarketplace.getState().accountVendors, ...VENDORS];
+/** Sample listings, or none when real accounts are on (published builds never show made-up vendors). */
+export const sampleVendors = (): Vendor[] => (accountsEnabled() ? [] : VENDORS);
+
+/** Real (approved) vendor accounts first, then any sample listings. */
+export const allVendors = (): Vendor[] => [...useMarketplace.getState().accountVendors, ...sampleVendors()];
 
 export const getVendor = (id: string | undefined) => allVendors().find((v) => v.id === id);

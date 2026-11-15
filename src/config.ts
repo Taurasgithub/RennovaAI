@@ -19,6 +19,12 @@ export const config = {
   privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? 'https://rennovaai.com/privacy',
   termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? 'https://rennovaai.com/terms',
 
+  /**
+   * Paid Premium Design Pack. Off until Google Play Billing is integrated: Play requires its own billing
+   * for digital upgrades sold in the app, so the pack must not be sold any other way.
+   */
+  premiumEnabled: process.env.EXPO_PUBLIC_PREMIUM === 'true',
+
   /** Business rules from the RennovaAI mini business plan. */
   freeRegenerationsPerDesign: 3,
   premiumPackPrice: 500, // PKR per project

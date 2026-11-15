@@ -2,6 +2,7 @@ import { File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 import { config } from '../config';
+import { accountsEnabled, supabase } from '../lib/supabase';
 import type { Draft, ResultMode } from '../store/useApp';
 
 export type GenerateResult = { mode: ResultMode; uri: string | null; message?: string };
@@ -9,17 +10,21 @@ export type GenerateResult = { mode: ResultMode; uri: string | null; message?: s
 export const aiServerConfigured = () => config.apiUrl.length > 0;
 
 /**
- * Phone photo → upload part for Expo's fetch.
- * Expo's fetch (SDK 52+) no longer accepts React Native's { uri, name, type } parts
- * ("Unsupported FormDataPart implementation"); it takes anything with name, type and bytes().
- * Converting to JPEG also handles WebP/AVIF/HEIC images (e.g. saved from Google), which the
- * server only accepts as JPG/PNG/WEBP, and shrinks large photos before uploading.
+ * Room photo → upload part, shrunk so its longest side is 512 px (what FLUX.2 on Workers AI expects;
+ * smaller uploads are also faster on mobile data). Always JPEG, which also covers WebP/AVIF/HEIC
+ * images saved from the web.
+ * Phones: Expo's fetch takes { name, type, bytes() } parts ("Unsupported FormDataPart implementation"
+ * for React Native's old { uri, name, type }). Web: a Blob.
  */
-async function jpegUpload(uri: string) {
-  const image = await ImageManipulator.manipulate(uri).resize({ width: 1280 }).renderAsync();
-  const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+async function photoPart(uri: string): Promise<Blob> {
+  const ctx = ImageManipulator.manipulate(uri);
+  const original = await ctx.renderAsync();
+  const landscape = original.width >= original.height;
+  const image = await ImageManipulator.manipulate(uri).resize(landscape ? { width: 512 } : { height: 512 }).renderAsync();
+  const saved = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.88 });
+  if (Platform.OS === 'web') return (await fetch(saved.uri)).blob();
   const file = new File(saved.uri);
-  return { name: 'room.jpg', type: 'image/jpeg', bytes: () => file.bytes() };
+  return { name: 'room.jpg', type: 'image/jpeg', bytes: () => file.bytes() } as unknown as Blob;
 }
 
 /**
@@ -36,19 +41,23 @@ export async function generateDesign(draft: Draft, seed = 0): Promise<GenerateRe
   }
 
   const form = new FormData();
-  if (Platform.OS === 'web') {
-    const blob = await (await fetch(draft.photoUri)).blob();
-    form.append('image', blob, 'room.jpg');
-  } else {
-    form.append('image', (await jpegUpload(draft.photoUri)) as unknown as Blob);
-  }
+  const part = await photoPart(draft.photoUri);
+  if (Platform.OS === 'web') form.append('image', part, 'room.jpg');
+  else form.append('image', part);
   const { photoUri, ...choices } = draft;
   form.append('choices', JSON.stringify({ ...choices, seed }));
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 120_000);
   try {
-    const res = await fetch(`${config.apiUrl}/api/visualize`, { method: 'POST', body: form, signal: controller.signal });
+    // The AI API only serves signed-in users (worker/src/index.js checks this token with Supabase).
+    const token = accountsEnabled() ? (await supabase.auth.getSession()).data.session?.access_token : undefined;
+    const res = await fetch(`${config.apiUrl}/api/visualize`, {
+      method: 'POST',
+      body: form,
+      signal: controller.signal,
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
     const json = (await res.json()) as { image?: string; error?: string };
     if (!res.ok || !json.image) throw new Error(json.error ?? `Server error ${res.status}`);
     return { mode: 'ai', uri: json.image };

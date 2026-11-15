@@ -236,6 +236,7 @@ export function Screen({
   footer,
   padded = true,
   bg = colors.bg,
+  refreshControl,
 }: {
   children: ReactNode;
   title?: string;
@@ -246,6 +247,8 @@ export function Screen({
   footer?: ReactNode;
   padded?: boolean;
   bg?: string;
+  /** Pull-to-refresh for scrolling screens. */
+  refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
 }) {
   const insets = useSafeAreaInsets();
   const content = padded ? { paddingHorizontal: spacing.lg } : undefined;
@@ -258,6 +261,7 @@ export function Screen({
           contentContainerStyle={[content, { paddingBottom: (footer ? spacing.lg : insets.bottom + spacing.xxl) }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>

@@ -14,14 +14,36 @@
       "android": {
         "buildType": "apk"
       },
-      "channel": "preview"
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://iuswkamleodzadpywzfa.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_5uSQ4jdZPIFfoah-gQ8uCg_8c_pafGA",
+        "EXPO_PUBLIC_API_URL": "https://rennovaai-ai.binance-live-mcp.workers.dev",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://rennovaai-ai.binance-live-mcp.workers.dev/privacy",
+        "EXPO_PUBLIC_TERMS_URL": "https://rennovaai-ai.binance-live-mcp.workers.dev/terms",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@rennovaai.com",
+        "EXPO_PUBLIC_SUPPORT_WHATSAPP": "923000000000",
+        "EXPO_PUBLIC_PREMIUM": "false",
+        "EXPO_PUBLIC_APPLE_WEB_SIGNIN": "false"
+      }
     },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
       },
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://iuswkamleodzadpywzfa.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_5uSQ4jdZPIFfoah-gQ8uCg_8c_pafGA",
+        "EXPO_PUBLIC_API_URL": "https://rennovaai-ai.binance-live-mcp.workers.dev",
+        "EXPO_PUBLIC_PRIVACY_URL": "https://rennovaai-ai.binance-live-mcp.workers.dev/privacy",
+        "EXPO_PUBLIC_TERMS_URL": "https://rennovaai-ai.binance-live-mcp.workers.dev/terms",
+        "EXPO_PUBLIC_SUPPORT_EMAIL": "support@rennovaai.com",
+        "EXPO_PUBLIC_SUPPORT_WHATSAPP": "923000000000",
+        "EXPO_PUBLIC_PREMIUM": "false",
+        "EXPO_PUBLIC_APPLE_WEB_SIGNIN": "false"
+      }
     }
   },
   "submit": {
