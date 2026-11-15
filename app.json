@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "description": "See it before you build it — AI room previews, instant renovation estimates and verified local vendors with milestone escrow.",
+    "description": "See it before you build it \u2014 AI room previews, instant renovation estimates and verified local vendors with milestone escrow.",
     "primaryColor": "#0AB49A",
     "ios": {
       "supportsTablet": false,
@@ -62,6 +62,18 @@
       "expo-web-browser",
       "expo-apple-authentication"
     ],
-    "backgroundColor": "#F7F9FB"
+    "backgroundColor": "#F7F9FB",
+    "extra": {
+      "eas": {
+        "projectId": "1c7e7900-5a61-4983-8691-c915163326a1"
+      }
+    },
+    "owner": "arsal003s-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1c7e7900-5a61-4983-8691-c915163326a1"
+    }
   }
 }
