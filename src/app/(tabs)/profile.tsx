@@ -13,6 +13,7 @@ import { budgetLabel, cityLabel, styleLabel, useT } from '../../i18n';
 import { aiServerConfigured } from '../../services/ai';
 import { useApp } from '../../store/useApp';
 import { useShallow } from 'zustand/react/shallow';
+import { useBookings } from '../../services/bookings';
 import { colors, fonts, spacing } from '../../theme';
 
 function Item({ icon, label, detail, onPress }: { icon: IconName; label: string; detail?: string; onPress: () => void }) {
@@ -32,7 +33,9 @@ export default function Profile() {
   const router = useRouter();
   const { t } = useT();
   const auth = useAuth();
-  const { user, setUser, designs, projects, vendorApplication, resetAll, language, setLanguage } = useApp(useShallow((s) => ({ user: s.user, setUser: s.setUser, designs: s.designs, projects: s.projects, vendorApplication: s.vendorApplication, resetAll: s.resetAll, language: s.language, setLanguage: s.setLanguage })));
+  const { user, setUser, designs, vendorApplication, resetAll, language, setLanguage } = useApp(useShallow((s) => ({ user: s.user, setUser: s.setUser, designs: s.designs, vendorApplication: s.vendorApplication, resetAll: s.resetAll, language: s.language, setLanguage: s.setLanguage })));
+  const me = auth.session?.user.id ?? null;
+  const bookingCount = useBookings((s) => s.bookings.filter((b) => b.customerId === me).length);
 
   // With accounts on, the city is saved to the account (which also updates the local copy).
   const setCity = (city: string) => {
@@ -64,8 +67,10 @@ export default function Profile() {
         extra={
           <Row style={{ marginTop: spacing.lg }} gap={spacing.sm}>
             <View style={styles.stat}><T variant="h2" style={{ color: colors.navy, fontFamily: fonts.extrabold }}>{designs.length}</T><T variant="caption">{t('profile.statDesigns')}</T></View>
-            <View style={styles.stat}><T variant="h2" style={{ color: colors.navy, fontFamily: fonts.extrabold }}>{projects.length}</T><T variant="caption">{t('profile.statProjects')}</T></View>
-            <View style={styles.stat}><T variant="h2" style={{ color: colors.teal, fontFamily: fonts.extrabold }}>{designs.filter((d) => d.premium).length}</T><T variant="caption">{t('profile.statPremium')}</T></View>
+            <View style={styles.stat}><T variant="h2" style={{ color: colors.navy, fontFamily: fonts.extrabold }}>{bookingCount}</T><T variant="caption">{t('profile.statProjects')}</T></View>
+            {config.premiumEnabled && (
+              <View style={styles.stat}><T variant="h2" style={{ color: colors.teal, fontFamily: fonts.extrabold }}>{designs.filter((d) => d.premium).length}</T><T variant="caption">{t('profile.statPremium')}</T></View>
+            )}
           </Row>
         }
       />
@@ -121,7 +126,7 @@ export default function Profile() {
 
       <Section title={t('profile.account')}>
         <Card style={{ paddingVertical: spacing.sm }}>
-          <Item icon="diamond-outline" label={t('profile.premium')} detail={t('profile.premiumDetail')} onPress={() => router.push('/premium')} />
+          {config.premiumEnabled && <Item icon="diamond-outline" label={t('profile.premium')} detail={t('profile.premiumDetail')} onPress={() => router.push('/premium')} />}
           <Item icon="logo-whatsapp" label={t('profile.help')} detail={t('profile.helpHours')} onPress={() => Linking.openURL(`https://wa.me/${config.supportWhatsApp}`).catch(() => {})} />
           <Item icon="mail-outline" label={t('profile.email')} detail={config.supportEmail} onPress={() => Linking.openURL(`mailto:${config.supportEmail}`).catch(() => {})} />
           <Item icon="document-text-outline" label={t('profile.privacy')} onPress={() => Linking.openURL(config.privacyPolicyUrl).catch(() => {})} />

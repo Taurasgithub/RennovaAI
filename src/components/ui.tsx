@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { isValidElement, type ComponentProps, type ReactNode } from 'react';
+import { isValidElement, useRef, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -16,6 +17,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { KEYBOARD_BEHAVIOR, useKeepFocusedInputVisible, type ScrollViewRef } from './keyboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useT } from '../i18n';
@@ -236,6 +238,7 @@ export function Screen({
   footer,
   padded = true,
   bg = colors.bg,
+  refreshControl,
 }: {
   children: ReactNode;
   title?: string;
@@ -246,18 +249,26 @@ export function Screen({
   footer?: ReactNode;
   padded?: boolean;
   bg?: string;
+  /** Pull-to-refresh for scrolling screens. */
+  refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
 }) {
   const insets = useSafeAreaInsets();
   const content = padded ? { paddingHorizontal: spacing.lg } : undefined;
+  const scrollRef = useRef<ScrollViewRef>(null);
+  const keepVisible = useKeepFocusedInputVisible(scrollRef);
   return (
-    <View style={{ flex: 1, backgroundColor: bg, paddingTop: insets.top }}>
+    // The whole screen (header, content, footer button) moves above the keyboard; see components/keyboard.ts.
+    <KeyboardAvoidingView behavior={KEYBOARD_BEHAVIOR} style={{ flex: 1, backgroundColor: bg, paddingTop: insets.top }}>
       {(title !== undefined || back) && <Header title={title} subtitle={subtitle} back={back} right={right} />}
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
+          {...keepVisible}
           style={{ flex: 1 }}
           contentContainerStyle={[content, { paddingBottom: (footer ? spacing.lg : insets.bottom + spacing.xxl) }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>
@@ -265,7 +276,7 @@ export function Screen({
         <View style={[{ flex: 1 }, content]}>{children}</View>
       )}
       {footer && <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>{footer}</View>}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

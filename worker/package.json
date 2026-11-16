@@ -1,0 +1,16 @@
+{
+  "name": "rennovaai-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "RennovaAI AI visualisation API on Cloudflare Workers (Workers AI, FLUX.2 klein).",
+  "scripts": {
+    "dev": "wrangler dev --remote",
+    "deploy": "wrangler deploy",
+    "login": "wrangler login",
+    "logs": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "4.127.1"
+  }
+}

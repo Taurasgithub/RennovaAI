@@ -36,28 +36,8 @@ export type Design = {
   regenerations: number;
   premium: boolean;
   estimate: Estimate;
-};
-
-export type MilestoneStatus = 'awaiting_deposit' | 'in_escrow' | 'released';
-/** `stage` (0–2) picks the translated title; `title` is the English fallback kept for older saved projects. */
-export type Milestone = { id: string; title: string; stage?: number; pct: number; amount: number; status: MilestoneStatus };
-export type Message = { id: string; from: 'me' | 'vendor'; text: string; at: string };
-
-export type Project = {
-  id: string;
-  designId: string;
-  vendorId: string;
-  title: string;
-  price: number;
-  discount: number;
-  days: number;
-  paymentMethod: string;
-  createdAt: string;
-  status: 'active' | 'completed';
-  milestones: Milestone[];
-  messages: Message[];
-  rating?: number;
-  review?: string;
+  /** Set once the design is saved to the account (services/designSync.ts): which local images were uploaded, and where. */
+  remote?: { photoPath: string | null; resultPath: string | null; photoUri: string | null; resultUri: string | null };
 };
 
 export type VendorApplication = {
@@ -95,9 +75,7 @@ type State = {
   user: User | null;
   draft: Draft;
   designs: Design[];
-  projects: Project[];
   vendorApplication: VendorApplication | null;
-  referralUsed: boolean;
   studentPackClaimed: boolean;
 };
 
@@ -110,13 +88,9 @@ type Actions = {
   saveDesign: (d: Omit<Design, 'id' | 'createdAt'>) => string;
   updateDesign: (id: string, p: Partial<Design>) => void;
   deleteDesign: (id: string) => void;
-  createProject: (p: Omit<Project, 'id' | 'createdAt' | 'status' | 'messages'>, greeting: string) => string;
-  depositMilestone: (projectId: string, milestoneId: string) => void;
-  releaseMilestone: (projectId: string, milestoneId: string) => void;
-  addMessage: (projectId: string, m: Omit<Message, 'id' | 'at'>) => void;
-  rateProject: (projectId: string, rating: number, review: string) => void;
+  /** Adds designs restored from the account (newest first overall). */
+  addDesigns: (d: Design[]) => void;
   submitVendorApplication: (a: Omit<VendorApplication, 'submittedAt' | 'step'>) => void;
-  markReferralUsed: () => void;
   claimStudentPack: () => void;
   resetAll: () => void;
 };
@@ -128,14 +102,9 @@ const initial: State = {
   user: null,
   draft: emptyDraft(),
   designs: [],
-  projects: [],
   vendorApplication: null,
-  referralUsed: false,
   studentPackClaimed: false,
 };
-
-const mapProject = (projects: Project[], id: string, fn: (p: Project) => Project) =>
-  projects.map((p) => (p.id === id ? fn(p) : p));
 
 export const useApp = create<State & Actions>()(
   persist(
@@ -158,47 +127,9 @@ export const useApp = create<State & Actions>()(
         dropImage(gone?.photoUri);
         dropImage(gone?.resultUri);
       },
-      createProject: (p, greeting) => {
-        const id = uid();
-        const now = new Date().toISOString();
-        const project: Project = {
-          ...p,
-          id,
-          createdAt: now,
-          status: 'active',
-          messages: [
-            { id: uid(), from: 'vendor', text: greeting, at: now },
-          ],
-        };
-        set({ projects: [project, ...get().projects] });
-        return id;
-      },
-      depositMilestone: (projectId, milestoneId) =>
-        set({
-          projects: mapProject(get().projects, projectId, (p) => ({
-            ...p,
-            milestones: p.milestones.map((m) => (m.id === milestoneId ? { ...m, status: 'in_escrow' } : m)),
-          })),
-        }),
-      releaseMilestone: (projectId, milestoneId) =>
-        set({
-          projects: mapProject(get().projects, projectId, (p) => {
-            const milestones = p.milestones.map((m) => (m.id === milestoneId ? { ...m, status: 'released' as const } : m));
-            const done = milestones.every((m) => m.status === 'released');
-            return { ...p, milestones, status: done ? 'completed' : 'active' };
-          }),
-        }),
-      addMessage: (projectId, m) =>
-        set({
-          projects: mapProject(get().projects, projectId, (p) => ({
-            ...p,
-            messages: [...p.messages, { ...m, id: uid(), at: new Date().toISOString() }],
-          })),
-        }),
-      rateProject: (projectId, rating, review) =>
-        set({ projects: mapProject(get().projects, projectId, (p) => ({ ...p, rating, review })) }),
+      addDesigns: (list) =>
+        set({ designs: [...get().designs, ...list.filter((d) => !get().designs.some((x) => x.id === d.id))].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) }),
       submitVendorApplication: (a) => set({ vendorApplication: { ...a, submittedAt: new Date().toISOString(), step: 1 } }),
-      markReferralUsed: () => set({ referralUsed: true }),
       claimStudentPack: () => set({ studentPackClaimed: true }),
       resetAll: () => {
         set({ ...initial, hydrated: true, draft: emptyDraft() });

@@ -45,3 +45,7 @@ yarn-error.*
 google-play-service-account.json
 server/.env
 server/node_modules/
+
+# Cloudflare Worker
+worker/node_modules/
+.wrangler/

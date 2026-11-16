@@ -8,9 +8,9 @@ import { VendorAvatar, VendorCover } from '../../components/VendorCard';
 import { Badge, Button, Card, Divider, EmptyState, IconTile, Row, Screen, Section, Stars, T } from '../../components/ui';
 import { SERVICE_ICONS } from '../../data/catalog';
 import { useMarketplace, vendorFromProfile } from '../../data/marketplace';
-import { VENDORS, type Vendor } from '../../data/vendors';
+import { sampleVendors, type Vendor } from '../../data/vendors';
 import { availabilityLabel, cityLabel, designName, ratingLabel, responseLabel, serviceLabel, useT, type TKey } from '../../i18n';
-import { roundTo } from '../../lib/format';
+import { dateLabel, roundTo } from '../../lib/format';
 import { accountsEnabled, supabase, type VendorProfile } from '../../lib/supabase';
 import { useApp } from '../../store/useApp';
 import { colors, fonts, radius, spacing } from '../../theme';
@@ -19,7 +19,7 @@ const CHECKS: TKey[] = ['vendor.check1', 'vendor.check2', 'vendor.check3', 'vend
 
 /** Sample listing, approved vendor account, or (for a vendor previewing themselves) their own unapproved profile. */
 function useVendor(id: string | undefined) {
-  const listed = useMarketplace((s) => s.accountVendors.find((v) => v.id === id)) ?? VENDORS.find((v) => v.id === id);
+  const listed = useMarketplace((s) => s.accountVendors.find((v) => v.id === id)) ?? sampleVendors().find((v) => v.id === id);
   const [fetched, setFetched] = useState<Vendor | null | undefined>(listed ? null : undefined);
   useEffect(() => {
     if (listed || !id || !accountsEnabled()) return setFetched(null);
@@ -30,7 +30,24 @@ function useVendor(id: string | undefined) {
       .maybeSingle<VendorProfile>()
       .then(({ data }) => setFetched(data ? vendorFromProfile(data) : null));
   }, [id, listed]);
-  return { vendor: listed ?? fetched ?? undefined, loading: fetched === undefined };
+  // Real accounts: reviews come from completed bookings (first names only).
+  const [reviews, setReviews] = useState<Vendor['reviews'] | null>(null);
+  const base = listed ?? fetched ?? undefined;
+  const isAccount = !!base?.account;
+  useEffect(() => {
+    if (!isAccount || !id) return;
+    supabase.rpc('vendor_reviews', { p_vendor: id }).then(({ data }) =>
+      setReviews(
+        ((data as { rating: number; review: string; name: string; created_at: string }[]) ?? []).map((r) => ({
+          name: r.name || '—',
+          rating: r.rating,
+          text: r.review,
+          date: dateLabel(r.created_at),
+        })),
+      ),
+    );
+  }, [id, isAccount]);
+  return { vendor: base && reviews ? { ...base, reviews } : base, loading: fetched === undefined };
 }
 
 export default function VendorProfileScreen() {

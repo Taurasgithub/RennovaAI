@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMarketplace } from '../data/marketplace';
+import { useBookings } from '../services/bookings';
+import { startDesignSync } from '../services/designSync';
 import { accountsEnabled, supabase, type Profile, type Role, type VendorProfile } from '../lib/supabase';
 import { useApp, type User } from '../store/useApp';
 
@@ -58,6 +60,9 @@ export function userFromProfile(p: Profile): User {
 
 /** Clears on-device designs/projects so the next account on this phone starts clean; keeps the language. */
 function resetLocalData() {
+  // Stop syncing first: clearing the phone's designs must not delete them from the account.
+  startDesignSync(null);
+  useBookings.getState().start(null);
   const { language, resetAll, setLanguage } = useApp.getState();
   resetAll();
   setLanguage(language);
@@ -78,6 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!s) {
       setProfile(null);
       setVendor(null);
+      startDesignSync(null);
+      useBookings.getState().start(null);
       setReady(true);
       return;
     }
@@ -103,6 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setProfile(prof);
     setVendor(v ?? null);
+    // Bookings (both roles) and, for customers, saved designs live in the account.
+    if (useBookings.getState().userId !== s.user.id) useBookings.getState().start(s.user.id);
+    startDesignSync(prof?.role === 'customer' ? s.user.id : null);
     // Customer screens read name/phone/city from the local store.
     if (prof?.full_name) {
       const app = useApp.getState();

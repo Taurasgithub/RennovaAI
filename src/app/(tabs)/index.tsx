@@ -5,13 +5,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HouseAvatar, HouseBeforeAfter, Marker, Sparkle } from '../../components/brand';
 import { DesignThumb } from '../../components/DesignPreview';
 import { RoomIllustration } from '../../components/RoomIllustration';
-import { Badge, Button, Card, IconTile, Row, Section, T, tap, Txt } from '../../components/ui';
-import { config } from '../../config';
+import { Button, Card, IconTile, Row, Section, T, tap, Txt } from '../../components/ui';
 import { PALETTES, ROOM_TYPES, STYLES } from '../../data/catalog';
 import { budgetLabel, cityLabel, designName, projectTitle, roomLabel, styleBlurb, styleLabel, useT, type TKey } from '../../i18n';
 import { pkr } from '../../lib/format';
 import { useApp } from '../../store/useApp';
 import { useShallow } from 'zustand/react/shallow';
+import { useAuth } from '../../auth/AuthProvider';
+import { BookingBadge } from '../../components/BookingBadge';
+import { useBookings } from '../../services/bookings';
 import { colors, fonts, spacing } from '../../theme';
 
 const WHY: { icon: 'eye-outline' | 'shield-checkmark-outline' | 'git-compare-outline' | 'lock-closed-outline'; title: TKey; body: TKey }[] = [
@@ -26,8 +28,9 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t, ur } = useT();
-  const { user, designs, projects, resetDraft, updateDraft, referralUsed } = useApp(useShallow((s) => ({ user: s.user, designs: s.designs, projects: s.projects, resetDraft: s.resetDraft, updateDraft: s.updateDraft, referralUsed: s.referralUsed })));
-  const active = projects.find((p) => p.status === 'active');
+  const { user, designs, resetDraft, updateDraft } = useApp(useShallow((s) => ({ user: s.user, designs: s.designs, resetDraft: s.resetDraft, updateDraft: s.updateDraft })));
+  const me = useAuth().session?.user.id ?? null;
+  const active = useBookings((s) => s.bookings.find((b) => b.customerId === me && (b.status === 'accepted' || b.status === 'requested')));
 
   const firstName = user?.name?.split(' ')[0] ?? t('home.there');
   const favouriteIds = user?.preferredStyles ?? [];
@@ -83,17 +86,19 @@ export default function Home() {
           <Section title={t('home.activeProject')} action={t('home.seeAll')} onAction={() => router.push('/(tabs)/projects')}>
             <Card onPress={() => router.push(`/project/${active.id}`)}>
               <Row style={{ justifyContent: 'space-between' }}>
-                <T variant="h3" numberOfLines={1} style={{ flex: 1, fontFamily: fonts.extrabold, color: colors.navy }}>{projectTitle(active, designs)}</T>
+                <T variant="h3" numberOfLines={1} style={{ flex: 1, fontFamily: fonts.extrabold, color: colors.navy }}>{projectTitle(active)}</T>
                 <Ionicons name="chevron-forward" size={20} color={colors.textSubtle} />
               </Row>
               <Row style={{ marginTop: spacing.md }} gap={6}>
-                {active.milestones.map((m, i) => {
-                  const firstOpen = active.milestones.findIndex((x) => x.status !== 'released');
-                  return <Marker key={m.id} state={m.status === 'released' ? 'done' : i === firstOpen ? 'now' : 'next'} label={i + 1} size={28} />;
+                {active.stages.map((m, i) => {
+                  const firstOpen = active.stages.findIndex((x) => x.status !== 'approved');
+                  return <Marker key={m.id} state={m.status === 'approved' ? 'done' : i === firstOpen && active.status === 'accepted' ? 'now' : 'next'} label={i + 1} size={28} />;
                 })}
+                <View style={{ flex: 1 }} />
+                <BookingBadge status={active.status} />
               </Row>
               <T variant="small" style={{ marginTop: spacing.sm }}>
-                {t('home.milestonesComplete', { done: active.milestones.filter((m) => m.status === 'released').length, total: active.milestones.length, amount: pkr(active.price - active.discount) })}
+                {t('home.milestonesComplete', { done: active.stages.filter((m) => m.status === 'approved').length, total: active.stages.length, amount: pkr(active.price) })}
               </T>
             </Card>
           </Section>
@@ -198,18 +203,6 @@ export default function Home() {
           </Card>
         </Section>
 
-        {!referralUsed && (
-          <Card style={{ marginTop: spacing.lg, backgroundColor: colors.amberTint, borderColor: colors.amberTint }}>
-            <Row>
-              <View style={styles.giftTile}><Sparkle size={24} color={colors.navy} /></View>
-              <View style={{ flex: 1 }}>
-                <T variant="bodyStrong">{t('home.referralTitle', { amount: pkr(config.referralDiscount) })}</T>
-                <T variant="small">{t('home.referralBefore')} <T variant="small" style={{ fontFamily: fonts.bold, color: colors.navy }}>{config.referralCode}</T> {t('home.referralAfter')}</T>
-              </View>
-              <Badge label={t('home.new')} tone="amber" />
-            </Row>
-          </Card>
-        )}
       </View>
     </ScrollView>
   );

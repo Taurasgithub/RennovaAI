@@ -3,15 +3,17 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useAuth } from '../../auth/AuthProvider';
+import { BookingCard } from '../../components/BookingCard';
 import { Band, HouseAvatar, Marker, Sparkle } from '../../components/brand';
 import { Button, Card, Row, Section, T, Txt } from '../../components/ui';
 import { cityLabel, serviceLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
+import { needsAction, useBookings, type Booking } from '../../services/bookings';
 import { colors, fonts, spacing } from '../../theme';
 
 const STEPS: TKey[] = ['signup.step1', 'signup.step2', 'signup.step3', 'signup.step4'];
 
-/** Vendor dashboard: application / verification status, and (once approved) where customer bookings will appear. */
+/** Vendor dashboard: application / verification status and, once approved, booking requests and jobs. */
 export default function VendorDashboard() {
   const { t } = useT();
   const router = useRouter();
@@ -20,8 +22,16 @@ export default function VendorDashboard() {
   useFocusEffect(
     useCallback(() => {
       refresh();
+      useBookings.getState().reload();
     }, [refresh]),
   );
+
+  const me = profile?.id ?? null;
+  const mine = useBookings((s) => s.bookings).filter((b) => b.vendorId === me);
+  const requests = mine.filter((b) => b.status === 'requested');
+  const active = mine.filter((b) => b.status === 'accepted');
+  const past = mine.filter((b) => b.status !== 'requested' && b.status !== 'accepted');
+  const bookingWho = (b: Booking) => [b.customerName, cityLabel(b.customerCity)].filter(Boolean).join(' · ');
 
   const first = (profile?.full_name ?? '').split(' ')[0];
   const approved = vendor?.status === 'approved';
@@ -88,15 +98,32 @@ export default function VendorDashboard() {
           </Section>
         )}
 
-        <Section title={t('vendorHub.leads')}>
-          <Card style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="file-tray-outline" size={28} color={colors.tealDark} />
-            </View>
-            <T variant="bodyStrong" style={{ marginTop: spacing.md, textAlign: 'center', color: colors.navy }}>{t('vendorHub.leadsEmpty')}</T>
-            <T variant="small" style={{ textAlign: 'center', marginTop: 4 }}>{t(approved ? 'vendorHub.leadsApproved' : 'vendorHub.leadsPending')}</T>
-          </Card>
-        </Section>
+        {approved && requests.length > 0 && (
+          <Section title={t('vendorHub.requests', { n: requests.length })}>
+            {requests.map((b) => <BookingCard key={b.id} booking={b} attention subtitle={bookingWho(b)} />)}
+          </Section>
+        )}
+        {approved && active.length > 0 && (
+          <Section title={t('vendorHub.active')}>
+            {active.map((b) => <BookingCard key={b.id} booking={b} attention={needsAction(b, me)} subtitle={bookingWho(b)} />)}
+          </Section>
+        )}
+        {(!approved || requests.length + active.length === 0) && (
+          <Section title={t('vendorHub.leads')}>
+            <Card style={{ alignItems: 'center', paddingVertical: spacing.xl }}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="file-tray-outline" size={28} color={colors.tealDark} />
+              </View>
+              <T variant="bodyStrong" style={{ marginTop: spacing.md, textAlign: 'center', color: colors.navy }}>{t('vendorHub.leadsEmpty')}</T>
+              <T variant="small" style={{ textAlign: 'center', marginTop: 4 }}>{t(approved ? 'vendorHub.leadsApproved' : 'vendorHub.leadsPending')}</T>
+            </Card>
+          </Section>
+        )}
+        {approved && past.length > 0 && (
+          <Section title={t('vendorHub.past')}>
+            {past.map((b) => <BookingCard key={b.id} booking={b} subtitle={bookingWho(b)} />)}
+          </Section>
+        )}
 
         <Card style={{ marginTop: spacing.lg, backgroundColor: colors.amberTint, borderColor: colors.amberTint }}>
           <Row gap={spacing.sm}>

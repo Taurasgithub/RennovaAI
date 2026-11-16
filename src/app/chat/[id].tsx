@@ -1,73 +1,89 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../auth/AuthProvider';
+import { KEYBOARD_BEHAVIOR } from '../../components/keyboard';
 import { EmptyState, Header, T, tap } from '../../components/ui';
-import { getVendor } from '../../data/vendors';
+import { projectTitle, useT } from '../../i18n';
+import { notify } from '../../lib/dialogs';
 import { timeLabel } from '../../lib/format';
-import { responseLabel, useT, type TKey } from '../../i18n';
-import { useApp } from '../../store/useApp';
+import { useBookings } from '../../services/bookings';
 import { colors, fonts, radius, spacing } from '../../theme';
 
-const AUTO_REPLIES: TKey[] = ['chat.auto1', 'chat.auto2', 'chat.auto3', 'chat.auto4'];
-
+/** Chat between a booking's customer and vendor. Messages arrive live (Supabase Realtime). */
 export default function Chat() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const { t } = useT();
-  const project = useApp((s) => s.projects.find((p) => p.id === id));
-  const addMessage = useApp((s) => s.addMessage);
+  const me = useAuth().session?.user.id ?? null;
+  const booking = useBookings((s) => s.bookings.find((b) => b.id === id));
+  const messages = useBookings((s) => (id ? s.messages[id] : undefined));
   const [text, setText] = useState('');
-  const [typing, setTyping] = useState(false);
-  const replyIdx = useRef(0);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sending, setSending] = useState(false);
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  useEffect(() => {
+    if (id && me) useBookings.getState().loadMessages(id).catch(() => {});
+  }, [id, me]);
 
-  if (!project) return <View style={{ flex: 1, paddingTop: insets.top }}><Header title={t('chat.title')} /><EmptyState icon="chatbubbles-outline" title={t('chat.unavailable')} body={t('chat.gone')} /></View>;
-  const vendor = getVendor(project.vendorId);
+  if (!booking) return <View style={{ flex: 1, paddingTop: insets.top }}><Header title={t('chat.title')} /><EmptyState icon="chatbubbles-outline" title={t('chat.unavailable')} body={t('chat.gone')} /></View>;
+  const isVendor = booking.vendorId === me;
+  const other = isVendor ? booking.customerName || t('project.customer') : booking.vendorName || t('chat.vendor');
+  const closed = booking.status === 'declined' || booking.status === 'cancelled';
 
-  const send = () => {
+  const send = async () => {
     const msg = text.trim();
-    if (!msg) return;
+    if (!msg || sending) return;
     tap();
-    addMessage(project.id, { from: 'me', text: msg });
-    setText('');
-    // TODO(go-live): replace with real-time messaging (e.g. Firebase / WebSocket). Simulated vendor reply for the beta.
-    setTyping(true);
-    timer.current = setTimeout(() => {
-      addMessage(project.id, { from: 'vendor', text: t(AUTO_REPLIES[replyIdx.current++ % AUTO_REPLIES.length]) });
-      setTyping(false);
-    }, 1400);
+    setSending(true);
+    try {
+      await useBookings.getState().send(booking.id, msg);
+      setText('');
+    } catch (e) {
+      notify(t('chat.failed'), e instanceof Error ? e.message : undefined);
+    } finally {
+      setSending(false);
+    }
   };
 
-  const data = [...project.messages].reverse();
+  const data = [...(messages ?? [])].reverse();
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Header title={vendor?.name ?? t('chat.vendor')} subtitle={typing ? t('chat.typing') : t('chat.replies', { time: vendor ? responseLabel(vendor.responseTime) : t('chat.soon') })} />
-      <FlatList
-        inverted
-        data={data}
-        keyExtractor={(m) => m.id}
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}
-        renderItem={({ item }) => {
-          const mine = item.from === 'me';
-          return (
-            <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
-              <T style={{ color: mine ? colors.white : colors.text, fontFamily: fonts.medium, fontSize: 14.5, lineHeight: 20 }}>{item.text}</T>
-              <T variant="caption" style={{ color: mine ? 'rgba(255,255,255,0.7)' : colors.textSubtle, alignSelf: 'flex-end', marginTop: 2 }}>{timeLabel(item.at)}</T>
-            </View>
-          );
-        }}
-      />
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        <TextInput value={text} onChangeText={setText} placeholder={t('chat.placeholder')} placeholderTextColor={colors.textSubtle} style={styles.input} multiline onSubmitEditing={send} />
-        <Pressable accessibilityLabel={t('chat.send')} onPress={send} style={[styles.send, !text.trim() && { opacity: 0.5 }]}>
-          <Ionicons name="send" size={18} color={colors.white} />
-        </Pressable>
-      </View>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }} behavior={KEYBOARD_BEHAVIOR}>
+      <Header title={other} subtitle={projectTitle(booking)} />
+      {!messages ? (
+        <ActivityIndicator color={colors.teal} style={{ marginTop: spacing.xxxl }} />
+      ) : (
+        <FlatList
+          inverted
+          data={data}
+          keyExtractor={(m) => m.id}
+          contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm, flexGrow: 1 }}
+          ListEmptyComponent={<T variant="small" style={styles.empty}>{t('chat.empty', { name: other })}</T>}
+          renderItem={({ item }) => {
+            const mine = item.senderId === me;
+            return (
+              <View style={[styles.bubble, mine ? styles.mine : styles.theirs]}>
+                <T style={{ color: mine ? colors.white : colors.text, fontFamily: fonts.medium, fontSize: 14.5, lineHeight: 20 }}>{item.body}</T>
+                <T variant="caption" style={{ color: mine ? 'rgba(255,255,255,0.7)' : colors.textSubtle, alignSelf: 'flex-end', marginTop: 2 }}>{timeLabel(item.createdAt)}</T>
+              </View>
+            );
+          }}
+        />
+      )}
+      {closed ? (
+        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md), justifyContent: 'center' }]}>
+          <T variant="small" style={{ paddingVertical: spacing.sm }}>{t('chat.closed')}</T>
+        </View>
+      ) : (
+        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+          <TextInput value={text} onChangeText={setText} placeholder={t('chat.placeholder')} placeholderTextColor={colors.textSubtle} style={styles.input} multiline maxLength={2000} />
+          <Pressable accessibilityRole="button" accessibilityLabel={t('chat.send')} onPress={send} style={[styles.send, (!text.trim() || sending) && { opacity: 0.5 }]}>
+            {sending ? <ActivityIndicator color={colors.white} size="small" /> : <Ionicons name="send" size={18} color={colors.white} />}
+          </Pressable>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -76,6 +92,8 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '80%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.lg },
   mine: { alignSelf: 'flex-end', backgroundColor: colors.teal, borderBottomRightRadius: 4 },
   theirs: { alignSelf: 'flex-start', backgroundColor: colors.white, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
+  // The list is inverted, so this sits at the bottom of the screen.
+  empty: { textAlign: 'center', marginTop: 'auto', paddingHorizontal: spacing.xl, transform: [{ scaleY: -1 }] },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.sm, backgroundColor: colors.white, borderTopWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   input: { flex: 1, minHeight: 44, maxHeight: 120, borderRadius: 22, backgroundColor: colors.bg, paddingHorizontal: spacing.lg, paddingTop: 12, paddingBottom: 12, fontFamily: fonts.medium, fontSize: 15, color: colors.text },
   send: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.navy, alignItems: 'center', justifyContent: 'center' },

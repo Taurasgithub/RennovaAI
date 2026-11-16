@@ -3,7 +3,8 @@ import type { ServiceType } from '../data/catalog';
 import type { EstimateLine } from '../lib/estimate';
 import type { MatchReason } from '../lib/matching';
 import type { BudgetRange } from '../lib/supabase';
-import type { Design, Milestone, Project } from '../store/useApp';
+import type { Booking } from '../services/bookings';
+import type { Design } from '../store/useApp';
 import { useApp, type Language } from '../store/useApp';
 import { en, type TKey } from './en';
 import { ur } from './ur';
@@ -94,13 +95,12 @@ export const designName = (d: Pick<Design, 'name' | 'nameParts'>) => {
   });
 };
 
-export const projectTitle = (p: Project, designs: Design[]) => {
-  const d = designs.find((x) => x.id === p.designId);
-  return d ? designName(d) : p.title;
-};
+/** A booking's title in the active language (generated design names are rebuilt from their parts). */
+export const projectTitle = (b: Pick<Booking, 'title' | 'design'>) =>
+  b.design?.nameParts ? designName({ name: b.title, nameParts: b.design.nameParts }) : b.title;
 
-export const milestoneTitle = (m: Milestone) =>
-  m.stage !== undefined && has(`milestone.${m.stage}`) ? translate(`milestone.${m.stage}` as TKey) : m.title;
+/** Stage 0–2 of a booking: mobilisation, mid-work, completion. */
+export const milestoneTitle = (stage: number) => (has(`milestone.${stage}`) ? translate(`milestone.${stage}` as TKey) : `#${stage + 1}`);
 
 export const lineLabel = (l: EstimateLine) => {
   switch (l.part) {
@@ -137,13 +137,3 @@ export const reasonLabel = (r: MatchReason) => {
   }
 };
 
-const METHODS: Record<string, TKey> = {
-  jazzcash: 'book.method.jazzcash',
-  easypaisa: 'book.method.easypaisa',
-  card: 'book.method.card',
-  // Labels stored by builds before payment methods were saved by id.
-  JazzCash: 'book.method.jazzcash',
-  Easypaisa: 'book.method.easypaisa',
-  'Debit / credit card': 'book.method.card',
-};
-export const paymentLabel = (v: string) => (METHODS[v] ? translate(METHODS[v]) : v);

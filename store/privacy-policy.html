@@ -13,57 +13,68 @@
   p, li { color:var(--text); }
   .muted { color:var(--muted); }
   .tag { color:var(--amber); font-weight:700; letter-spacing:.12em; text-transform:uppercase; font-size:12px; }
+  .box { background:#fff; border:1.5px solid #E3E8EF; border-radius:14px; padding:4px 18px; }
 </style>
 </head>
 <body>
 <main>
   <div class="tag">RennovaAI</div>
   <h1>Privacy Policy</h1>
-  <p class="muted">Last updated: [DATE] · Contact: <a href="mailto:support@rennovaai.com">support@rennovaai.com</a></p>
+  <p class="muted">Last updated: 15 November 2026 · Contact: <a href="mailto:support@rennovaai.com">support@rennovaai.com</a></p>
 
-  <p>RennovaAI ("we", "us") provides a mobile app that lets you preview a renovated room, estimate renovation costs and connect with renovation vendors. This policy explains what information the app uses and why. <em>Review this policy with a legal adviser and fill in the bracketed items before publishing.</em></p>
+  <p>RennovaAI ("we", "us") provides a mobile app that lets you preview a renovated room with AI, estimate renovation costs and book local renovation vendors. This policy explains what information the app collects, why, and the choices you have.</p>
 
-  <h2>Information you provide</h2>
+  <h2>Information we collect</h2>
   <ul>
-    <li><strong>Profile:</strong> your name, optional mobile number and city — used to personalise the app and match you with vendors in your city.</li>
-    <li><strong>Room photos:</strong> photos you take or choose so we can generate a renovation preview.</li>
-    <li><strong>Design choices and notes:</strong> style, colours, materials, room size and any notes you add.</li>
-    <li><strong>Messages and reviews:</strong> chat messages with vendors and ratings you leave.</li>
-    <li><strong>Vendor applications:</strong> business name, owner name, phone, services, experience and portfolio photos. CNIC is verified in person and is never uploaded in the app.</li>
+    <li><strong>Account:</strong> your email address, or the name and email shared by Google or Apple if you sign in with them; the role you choose (customer or vendor).</li>
+    <li><strong>Profile:</strong> name, mobile number, city, optional area, photo, short bio, favourite styles and budget range.</li>
+    <li><strong>Room photos and designs:</strong> photos you take or choose, the AI previews generated from them, your design choices (style, colours, materials, room size) and cost estimates.</li>
+    <li><strong>Bookings and messages:</strong> booking requests, the agreed price and timeline, stage updates, chat messages with the vendor, and ratings or reviews you leave.</li>
+    <li><strong>Vendor applications:</strong> business name, owner name, phone, WhatsApp, services, service areas, working hours, experience, logo and portfolio photos. CNIC is verified in person and is never uploaded in the app.</li>
   </ul>
+  <p>We do not collect your location (you choose your city), contacts, or payment details.</p>
 
   <h2>How we use it</h2>
   <ul>
-    <li>To generate AI previews of your room. Photos are sent over an encrypted connection to our AI server, which forwards them to our image-generation provider [PROVIDER NAME] solely to create the preview.</li>
-    <li>To calculate cost estimates and shortlist suitable vendors.</li>
-    <li>To let you book, pay in milestones and communicate with vendors.</li>
-    <li>To provide customer support and resolve disputes.</li>
+    <li>To generate AI previews of your room. Your photo is sent over an encrypted connection to our AI service, which runs on Cloudflare Workers AI (image model by Black Forest Labs). The photo is used only to create the preview and is not kept by the AI service.</li>
+    <li>To calculate cost estimates and show vendors who work in your city.</li>
+    <li>To send your booking request to the vendor you choose and let you both follow the job and chat.</li>
+    <li>To review vendor applications, keep the marketplace safe and provide support.</li>
   </ul>
-  <p>We do not sell your personal information and we do not show third-party ads.</p>
+  <p>We do not sell your personal information and we do not show ads.</p>
 
-  <h2>Storage and retention</h2>
-  <p>In the current version, your profile, designs, projects and messages are stored on your device. Photos sent for AI generation are processed and not kept by our server after the preview is returned. [Update this section when cloud accounts and server storage are introduced, including retention periods.]</p>
+  <h2>Payments</h2>
+  <p>RennovaAI does not take, hold or process payments. Customers pay vendors directly for each stage of the work.</p>
 
-  <h2>Sharing</h2>
-  <p>When you book a vendor, we share the details needed to do the job (your name, phone, city/area and design brief) with that vendor. Payment details are handled by our payment partners (e.g. JazzCash, Easypaisa, card processors) under their own policies.</p>
+  <h2>Where it is stored</h2>
+  <p>Your account, profile, designs, booking details and messages are stored with our database provider, Supabase, and are protected so that only you (and, for a booking, the vendor you booked) can see them. Room photos and AI previews are stored in a private storage area. Vendor business profiles that have been approved are public inside the app. Data is encrypted in transit (HTTPS).</p>
+
+  <h2>Who can see what</h2>
+  <ul>
+    <li>When you book a vendor, that vendor sees your name, mobile number, city, your note, and the design you booked (photo, AI preview, choices and estimate).</li>
+    <li>Ratings and reviews you leave are shown on the vendor's public profile with your first name only.</li>
+    <li>RennovaAI administrators can see accounts, vendor applications and bookings to verify vendors and resolve problems.</li>
+    <li>Service providers who run the app for us (Supabase for data, Cloudflare for AI, Google and Apple if you use their sign-in, Expo for app updates) process data only to provide their service.</li>
+  </ul>
 
   <h2>Permissions</h2>
   <ul>
-    <li><strong>Camera</strong> — to photograph your room (only when you tap "Take photo").</li>
-    <li><strong>Photos</strong> — to choose an existing picture of your room or portfolio work.</li>
+    <li><strong>Camera:</strong> to photograph your room or work, only when you tap to take a photo.</li>
+    <li><strong>Photos:</strong> to choose an existing picture.</li>
   </ul>
 
-  <h2>Your choices</h2>
-  <p>You can edit your profile at any time and delete all app data from <strong>Profile → Delete my data &amp; sign out</strong>. To request deletion of any data held on our servers, email <a href="mailto:support@rennovaai.com">support@rennovaai.com</a>.</p>
+  <h2 id="delete-account">Deleting your account and data</h2>
+  <div class="box">
+    <p><strong>In the app:</strong> open <em>Profile</em> (customers) or <em>Account</em> (vendors), then tap <em>Delete account</em>. This permanently deletes your account, profile, photos, saved designs, your bookings as a customer, and your messages, straight away.</p>
+    <p><strong>Without the app:</strong> email <a href="mailto:support@rennovaai.com?subject=Delete%20my%20RennovaAI%20account">support@rennovaai.com</a> from the address you signed up with, with the subject "Delete my RennovaAI account". We delete the account and its data within 30 days and confirm by email.</p>
+    <p>When a vendor deletes their account, past bookings stay visible to the customers who made them (without the vendor's details). Server backups are overwritten within 30 days.</p>
+  </div>
 
   <h2>Children</h2>
   <p>RennovaAI is intended for adults (18+) and is not directed at children.</p>
 
-  <h2>Security</h2>
-  <p>Data sent between the app and our servers is encrypted in transit (HTTPS). Payments are held in escrow by our payment partners.</p>
-
   <h2>Changes</h2>
-  <p>We will update this page and the "Last updated" date when this policy changes.</p>
+  <p>We will update this page and the "Last updated" date when this policy changes, and tell you in the app about significant changes.</p>
 
   <h2>Contact</h2>
   <p>RennovaAI, Sukkur, Sindh, Pakistan · <a href="mailto:support@rennovaai.com">support@rennovaai.com</a></p>

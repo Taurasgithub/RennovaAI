@@ -17,12 +17,14 @@ This app targets **Android 16 (API 36)** with min SDK 24 (Android 7.0), which me
 
 ## 2. Configure before the first build
 
-- `app.json` → `android.package` is `com.rennovaai.app`. **It can never change after the first upload** — change it now if you want another ID.
-- Copy `.env.example` → `.env` and set:
-  - `EXPO_PUBLIC_API_URL` — your deployed `/server` URL (leave empty to ship with on-device preview mode)
-  - `EXPO_PUBLIC_SUPPORT_WHATSAPP`, `EXPO_PUBLIC_SUPPORT_EMAIL`
-  - `EXPO_PUBLIC_PRIVACY_URL` — Google requires a public privacy-policy URL (host `store/privacy-policy.html`, e.g. GitHub Pages)
-- For EAS cloud builds, add the same variables as EAS environment variables (expo.dev → project → Environment variables) or in `eas.json` under `build.production.env`, because `.env` is git-ignored.
+- `app.json` → `android.package` is `com.rennovaai.app`. **It can never change after the first upload**, so change it now if you want another ID.
+- The database must have all migrations applied (`supabase/README.md` step 2, including `0004_projects.sql`).
+- The AI API is the Cloudflare Worker (`worker/README.md`), live at `https://rennovaai-ai.binance-live-mcp.workers.dev`. It also serves the privacy policy (`/privacy`), the terms (`/terms`) and the account-deletion page (`/delete-account`).
+- Build settings live in `eas.json` → `build.preview.env` / `build.production.env`, since `.env` is git-ignored. All of them are public values (no secrets). Before the first production build, replace the two placeholders:
+  - `EXPO_PUBLIC_SUPPORT_EMAIL`: an inbox you actually read. Google emails it, and users send deletion requests to it.
+  - `EXPO_PUBLIC_SUPPORT_WHATSAPP`: your support number, in international format without `+` (e.g. `923001234567`).
+  The same email appears in `store/privacy-policy.html` and `store/terms.html`; update them and run `npx wrangler deploy` in `worker/`.
+- `EXPO_PUBLIC_PREMIUM` stays `false`. The paid Premium Design Pack is a digital upgrade, so Google Play only allows it through Play Billing, which isn't integrated yet.
 
 ## 3. Build
 
@@ -40,29 +42,36 @@ On the first production build EAS offers to **generate the Android upload keysto
    - Feature graphic: `store/feature-graphic-1024x500.png`
    - Phone screenshots (2–8): `store/screenshots/*.png` (1080×1920)
 3. **App content**:
-   - Privacy policy URL (step 2)
+   - Privacy policy URL: `https://rennovaai-ai.binance-live-mcp.workers.dev/privacy`
    - Ads: *No ads*
-   - App access: *All functionality available without special access* (no login wall)
+   - App access: *All or some functionality is restricted*. The app needs an account, so give Google's reviewers a working login:
+     - Create a customer test account (e.g. `playreview@…`) with a saved design.
+     - Create a vendor test account that you approve in Admin.
+     - Enter both email/password pairs with short instructions ("Customer: Designs tab → open design → Get quotes → Book. Vendor: Vendor Hub → New requests").
    - Content rating questionnaire: utility/productivity, no violence or user-generated sexual content → expected **Everyone / PEGI 3**. Note: chat between customers and vendors counts as user interaction.
    - Target audience: 18+
    - Data safety: see the table below
-   - Government apps: No. Financial features: declare that the app facilitates payments for services if you enable real payments.
+   - Government apps: No. Financial features: *None*. RennovaAI does not process payments; customers pay vendors directly.
+   - Account deletion: in-app (Profile/Account → Delete account) and the web link `https://rennovaai-ai.binance-live-mcp.workers.dev/delete-account`.
 4. **Testing → Closed testing** → create a track, add ≥12 testers (Google Group or email list), upload the `.aab`, roll out. Keep it running 14 days, collect feedback.
 5. **Apply for production**, then **Production → Create release** → upload the `.aab` (or promote the tested release) → review → roll out.
 
 Optional automated upload: create a Google Cloud service account with Play Console access, save its key as `google-play-service-account.json` (git-ignored), then `npm run submit:android`.
 
-## 5. Data safety form (current beta build)
+## 5. Data safety form
 
-| Data type | Collected? | Notes |
-|---|---|---|
-| Name, phone number | Stored on device only in this beta | Becomes *collected* once you add a backend/auth |
-| Photos | Shared with your AI server **only if** `EXPO_PUBLIC_API_URL` is set, for generating the preview; not stored by the server code provided | Purpose: app functionality |
-| Messages (chat) | On device only in this beta | Becomes *collected* with real-time chat |
-| Approximate/precise location | No | City is chosen manually |
-| Financial info | No (payments in test mode) | Update when the gateway is integrated |
+Data is **encrypted in transit**. Users can **request deletion**, both in the app and at `/delete-account`. Nothing is sold, and there are no ads.
 
-Data is encrypted in transit (HTTPS) and users can delete their data from **Profile → Delete my data & sign out**.
+| Data type (Play category) | Collected | Shared | Purpose | Required? |
+|---|---|---|---|---|
+| Name, email address, phone number (Personal info) | Yes | Yes, with the vendor a customer books | App functionality, account management | Email required; phone optional |
+| Photos (Photos and videos) | Yes | Yes, with the booked vendor; processed by the AI service to make the preview | App functionality | Optional (a sample room works without a photo) |
+| Messages (in-app messages) | Yes | Yes, between the customer and vendor of a booking | App functionality | Optional |
+| Other user-generated content (designs, notes, reviews) | Yes | Reviews are shown publicly with first name only | App functionality | Optional |
+| User IDs | Yes | No | Account management | Required |
+| Location, contacts, financial info, health, device IDs | No | No | | |
+
+Service providers (Supabase, Cloudflare, Google/Apple sign-in, Expo) process data on our behalf. Play does not count that as "sharing".
 
 ## 6. Updating the app
-Change `version` in `app.json` (e.g. 1.0.1), run `npm run build:android`, upload the new `.aab`. For JS-only fixes you can also ship over-the-air updates with `eas update` after adding `expo-updates`.
+Change `version` in `app.json` (e.g. 1.0.1), run `npm run build:android`, upload the new `.aab`. For JavaScript-only fixes you can ship over-the-air updates with `npx eas-cli@latest update --channel production`; `expo-updates` is already set up.
