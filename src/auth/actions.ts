@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { isRunningInExpoGo } from 'expo';
+import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
@@ -19,9 +21,20 @@ function fail(error: { message: string; code?: string; status?: number }): AuthR
   return { error: error.message };
 }
 
-/** Where OAuth providers send the user back: rennovaai://auth/callback in the app, /auth/callback on the web. */
-const redirectUrl = () =>
-  Platform.OS === 'web' && typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : Linking.createURL('auth/callback');
+/**
+ * Where OAuth providers and email links send the user back:
+ *  - web: /auth/callback on the current site
+ *  - Expo Go: exp://<dev server>/--/auth/callback (Expo Go can't open the app's own rennovaai:// links;
+ *    SDK 58's Expo Go also reports a "bare" environment, so Linking.createURL would pick rennovaai://)
+ *  - installed app (development or store build): rennovaai://auth/callback
+ * All three must be in Supabase → Authentication → URL Configuration → Redirect URLs.
+ */
+const redirectUrl = () => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return `${window.location.origin}/auth/callback`;
+  const host = Constants.expoConfig?.hostUri;
+  if (isRunningInExpoGo() && host) return `exp://${host}/--/auth/callback`;
+  return Linking.createURL('auth/callback');
+};
 
 export async function signInWithEmail(email: string, password: string): Promise<AuthResult> {
   const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });

@@ -1,12 +1,13 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
 import { AccountSignIn } from '../components/AccountSignIn';
 import { BeforeAfter } from '../components/BeforeAfter';
+import { KEYBOARD_BEHAVIOR, useKeepFocusedInputVisible, type ScrollViewRef } from '../components/keyboard';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { Backdrop, HouseDivider, SparkMarks, Swash } from '../components/OnboardingDecor';
 import { GoogleMark, GradientButton as NextButton, IconField, OrDivider, PakistanFlag, SocialButton } from '../components/OnboardingParts';
@@ -367,16 +368,20 @@ export default function Onboarding() {
   };
 
   const isSlide = step < SLIDE_COUNT;
+  const scrollRef = useRef<ScrollViewRef>(null);
+  const keepVisible = useKeepFocusedInputVisible(scrollRef);
   const contentWidth = Math.min(windowWidth, MAX_WIDTH) - spacing.xl * 2;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: colors.white }}>
+    <KeyboardAvoidingView behavior={KEYBOARD_BEHAVIOR} style={{ flex: 1, backgroundColor: colors.white }}>
       {/* Houses flank the hero and the welcome collage; slides keep only the right one, beside the title; the form has none. */}
       <Backdrop
         houses={step === 0 || step === WELCOME ? 'both' : step === PROFILE ? 'none' : 'right'}
         houseTop={step === 0 ? '51%' : step === WELCOME ? '17%' : '33%'}
       />
       <ScrollView
+        ref={scrollRef}
+        {...keepVisible}
         contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + spacing.md, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg }}
         keyboardShouldPersistTaps="handled"
       >

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../auth/AuthProvider';
+import { KEYBOARD_BEHAVIOR } from '../../components/keyboard';
 import { EmptyState, Header, T, tap } from '../../components/ui';
 import { projectTitle, useT } from '../../i18n';
 import { notify } from '../../lib/dialogs';
@@ -49,7 +50,7 @@ export default function Chat() {
   const data = [...(messages ?? [])].reverse();
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }} behavior={KEYBOARD_BEHAVIOR}>
       <Header title={other} subtitle={projectTitle(booking)} />
       {!messages ? (
         <ActivityIndicator color={colors.teal} style={{ marginTop: spacing.xxxl }} />

@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { KEYBOARD_BEHAVIOR } from '../components/keyboard';
+import { Pressable, StyleSheet, TextInput, View, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DesignThumb } from '../components/DesignPreview';
 import { Badge, Button, Card, Header, Row, T, tap } from '../components/ui';
@@ -44,7 +45,7 @@ export default function Premium() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <KeyboardAvoidingView behavior={KEYBOARD_BEHAVIOR} style={{ flex: 1, backgroundColor: colors.bg }}>
       <LinearGradient colors={[colors.navy, colors.navyDeep]} style={{ paddingTop: insets.top, paddingBottom: spacing.xxl }}>
         <Header dark title="" />
         <View style={{ paddingHorizontal: spacing.xl }}>
@@ -104,7 +105,7 @@ export default function Premium() {
           onPress={eligible.length ? buy : () => router.replace('/design/capture')}
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
