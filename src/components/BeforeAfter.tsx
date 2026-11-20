@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useReducedMotion } from 'react-native-reanimated';
 import { PanResponder, StyleSheet, View } from 'react-native';
 import { useT } from '../i18n';
 import { colors, fonts, radius } from '../theme';
@@ -16,6 +17,33 @@ export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode
   const widthRef = useRef(0);
   const startRef = useRef(0.55);
   const posRef = useRef(0.55);
+  const touched = useRef(false);
+  const reduced = useReducedMotion();
+
+  // First time it appears, the handle sweeps across once to show the slider can be dragged.
+  useEffect(() => {
+    if (!width || reduced) return;
+    const keys = [0.55, 0.85, 0.2, 0.55];
+    const legMs = 620;
+    const t0 = Date.now() + 450;
+    let frame = 0;
+    const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    const tick = () => {
+      if (touched.current) return;
+      const elapsed = Date.now() - t0;
+      if (elapsed >= 0) {
+        const leg = Math.min(keys.length - 2, Math.floor(elapsed / legMs));
+        const p = Math.min(1, (elapsed - leg * legMs) / legMs);
+        const next = keys[leg] + (keys[leg + 1] - keys[leg]) * ease(p);
+        posRef.current = next;
+        setPos(next);
+        if (leg === keys.length - 2 && p >= 1) return;
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [width, reduced]);
 
   const responder = useMemo(
     () =>
@@ -24,6 +52,7 @@ export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode
         onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > Math.abs(g.dy),
         onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: (e) => {
+          touched.current = true; // the person takes over from the intro sweep
           const w = widthRef.current || 1;
           const p = Math.min(1, Math.max(0, e.nativeEvent.locationX / w));
           startRef.current = p;

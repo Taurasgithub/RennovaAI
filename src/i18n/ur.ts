@@ -792,4 +792,9 @@ export const ur: Record<TKey, string> = {
   'account.deleteFailed': 'اکاؤنٹ ڈیلیٹ نہیں ہو سکا',
   'result.regensUsedTitle': 'مفت ری جنریشنز ختم',
   'result.regensUsed': 'آپ اس ڈیزائن کی مفت ری جنریشنز استعمال کر چکے ہیں۔ مزید آئیڈیاز کے لیے ڈیزائن میں ترمیم کریں یا نیا ڈیزائن شروع کریں۔',
+  'admin.greeting': 'خوش آمدید، {name}',
+  'admin.needsReview': '{n} وینڈر درخواستیں آپ کے جائزے کی منتظر ہیں',
+  'admin.needsReview.one': '1 وینڈر درخواست آپ کے جائزے کی منتظر ہے',
+  'admin.allClear': 'سب ٹھیک ہے۔ کوئی درخواست زیرِ التوا نہیں۔',
+  'admin.tapToReview': 'جائزے کے لیے ٹیپ کریں',
 };

@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, RefreshControl } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import { useAuth } from '../../auth/AuthProvider';
 import { BookingCard } from '../../components/BookingCard';
-import { EmptyState, Screen } from '../../components/ui';
+import { Skeleton } from '../../components/motion';
+import { Card, EmptyState, Row, Screen } from '../../components/ui';
 import { useT } from '../../i18n';
 import { needsAction, useBookings } from '../../services/bookings';
 import { useApp } from '../../store/useApp';
-import { colors, spacing } from '../../theme';
+import { spacing } from '../../theme';
 
 /** The customer's bookings: requests, jobs in progress and finished ones. */
 export default function Projects() {
@@ -27,7 +28,19 @@ export default function Projects() {
   return (
     <Screen back={false} title={t('projects.title')} refreshControl={<RefreshControl refreshing={false} onRefresh={reload} />}>
       {!loaded ? (
-        <ActivityIndicator color={colors.teal} style={{ marginTop: spacing.xxxl }} />
+        // Placeholder cards in the shape of the real ones while bookings load.
+        [0, 1, 2].map((i) => (
+          <Card key={i} style={{ marginTop: spacing.md }}>
+            <Row gap={spacing.md}>
+              <Skeleton width={64} height={64} radius={12} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Skeleton width="70%" height={16} />
+                <Skeleton width="45%" height={12} />
+                <Skeleton width={90} height={20} radius={6} />
+              </View>
+            </Row>
+          </Card>
+        ))
       ) : bookings.length === 0 ? (
         <EmptyState
           icon="construct-outline"

@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, TextInput, View } from 'react-native';
 import { useAuth } from '../../auth/AuthProvider';
 import { BookingBadge } from '../../components/BookingBadge';
+import { Celebrate } from '../../components/Celebrate';
 import { HouseBar, Marker } from '../../components/brand';
 import { DesignCompare } from '../../components/DesignPreview';
 import { Button, Card, EmptyState, IconButton, Row, Screen, Section, Stars, T } from '../../components/ui';
@@ -15,7 +16,7 @@ import { colors, fonts, radius, spacing } from '../../theme';
 
 /** One booking, seen by its customer or its vendor. */
 export default function ProjectScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, celebrate } = useLocalSearchParams<{ id: string; celebrate?: string }>();
   const router = useRouter();
   const { t } = useT();
   const { session } = useAuth();
@@ -23,6 +24,14 @@ export default function ProjectScreen() {
   const booking = useBookings((s) => s.bookings.find((b) => b.id === id));
   const loaded = useBookings((s) => s.loaded);
   const refreshOne = useBookings((s) => s.refreshOne);
+
+  // Sparkles when the booking was just sent, and when the project is completed while it's open.
+  const [burst, setBurst] = useState(celebrate === '1' ? 1 : 0);
+  const lastStatus = useRef(booking?.status);
+  useEffect(() => {
+    if (booking?.status === 'completed' && lastStatus.current && lastStatus.current !== 'completed') setBurst((n) => n + 1);
+    lastStatus.current = booking?.status;
+  }, [booking?.status]);
 
   // Opened from a link or before the list loaded: fetch just this booking.
   useEffect(() => {
@@ -38,6 +47,7 @@ export default function ProjectScreen() {
   const chatOpen = booking.status !== 'declined' && booking.status !== 'cancelled';
 
   return (
+    <View style={{ flex: 1 }}>
     <Screen
       title={title}
       subtitle={t('project.booked', { date: dateLabel(booking.createdAt) })}
@@ -88,6 +98,8 @@ export default function ProjectScreen() {
         )}
       </Section>
     </Screen>
+    <Celebrate trigger={burst} />
+    </View>
   );
 }
 

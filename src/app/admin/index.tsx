@@ -1,99 +1,99 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { RefreshControl, StyleSheet, View } from 'react-native';
+import Animated, { FadeOutLeft, LinearTransition } from 'react-native-reanimated';
 import { useAdminData } from '../../admin/useAdminData';
+import { useAuth } from '../../auth/AuthProvider';
+import { AdminButton, AdminHeader, adminText, EmptyPanel, Panel, Pill, SectionLabel, SkeletonList, StatTile } from '../../components/admin/kit';
 import { ROLE_LABEL } from '../../components/AccountPanel';
-import { AdminTitle, HouseAvatar, ROLE_COLOR, Sparkle, Swatch } from '../../components/brand';
-import { Button, Card, Row, Screen, Section, T } from '../../components/ui';
-import { cityLabel, serviceLabel, useT, type TKey } from '../../i18n';
+import { HouseAvatar } from '../../components/brand';
+import { enter } from '../../components/motion';
+import { Screen, Txt } from '../../components/ui';
+import { cityLabel, serviceLabel, useT } from '../../i18n';
 import { dateLabel } from '../../lib/format';
-import { colors, fonts, spacing } from '../../theme';
+import { admin } from '../../theme/admin';
+import { spacing } from '../../theme';
+
+const ROLE_AVATAR = { customer: admin.primary, vendor: admin.attention, admin: admin.edge } as const;
 
 export default function AdminOverview() {
   const { t } = useT();
   const router = useRouter();
-  const { profiles, vendors, loading, error, approveVendor } = useAdminData();
+  const { profile } = useAuth();
+  const { profiles, vendors, loading, error, approveVendor, reload } = useAdminData();
   const pending = vendors.filter((v) => v.status === 'pending');
-
-  const stats: { label: TKey; value: number; hot?: boolean }[] = [
-    { label: 'admin.statUsers', value: profiles.length },
-    { label: 'admin.statPending', value: pending.length, hot: pending.length > 0 },
-    { label: 'admin.statCustomers', value: profiles.filter((p) => p.role === 'customer').length },
-    { label: 'admin.statVendors', value: profiles.filter((p) => p.role === 'vendor').length },
-    { label: 'admin.statApproved', value: vendors.filter((v) => v.status === 'approved').length },
-    { label: 'admin.statSuspended', value: profiles.filter((p) => p.status === 'suspended').length },
-  ];
+  const first = (profile?.full_name || '').split(' ')[0];
 
   return (
-    <Screen back={false} bg={colors.mist}>
-      <AdminTitle kicker={t('role.admin')} title={t('admin.title')} sub={t('admin.subtitle')} />
-      {!!error && <T variant="small" style={{ color: colors.alert, marginTop: spacing.sm }}>{error}</T>}
+    <Screen back={false} bg={admin.background} refreshControl={<RefreshControl refreshing={false} onRefresh={reload} tintColor={admin.primary} colors={[admin.primary]} />}>
+      <AdminHeader
+        kicker={t('role.admin')}
+        title={first ? t('admin.greeting', { name: first }) : t('admin.title')}
+        sub={pending.length ? t('admin.needsReview', { n: pending.length }) : t('admin.allClear')}
+      />
+      {!!error && <Txt style={[adminText.sub, { color: admin.danger, marginTop: spacing.sm }]}>{error}</Txt>}
+
       {loading ? (
-        <ActivityIndicator color={colors.teal} style={{ marginTop: spacing.xxl }} />
+        <SkeletonList rows={4} />
       ) : (
-        <>
+        <View>
           <View style={styles.grid}>
-            {stats.map((s) => (
-              <View key={s.label} style={[styles.stat, s.hot && styles.statHot]}>
-                <Row style={{ justifyContent: 'space-between' }}>
-                  <T variant="small" style={{ color: s.hot ? colors.navy : colors.textMuted, fontFamily: fonts.bold }}>{t(s.label)}</T>
-                  {s.hot && <Sparkle size={14} color={colors.navy} />}
-                </Row>
-                <T style={styles.statValue}>{s.value}</T>
-              </View>
-            ))}
+            <StatTile label={t('admin.statPending')} value={pending.length} icon="hourglass-outline" tone="attention" hint={pending.length ? t('admin.tapToReview') : undefined} onPress={() => router.navigate('/admin/vendors')} />
+            <StatTile label={t('admin.statUsers')} value={profiles.length} icon="people-outline" tone="primary" onPress={() => router.navigate('/admin/users')} />
+            <StatTile label={t('admin.statCustomers')} value={profiles.filter((p) => p.role === 'customer').length} icon="home-outline" tone="primary" />
+            <StatTile label={t('admin.statVendors')} value={profiles.filter((p) => p.role === 'vendor').length} icon="construct-outline" tone="neutral" />
+            <StatTile label={t('admin.statApproved')} value={vendors.filter((v) => v.status === 'approved').length} icon="shield-checkmark-outline" tone="primary" />
+            <StatTile label={t('admin.statSuspended')} value={profiles.filter((p) => p.status === 'suspended').length} icon="ban-outline" tone="danger" />
           </View>
 
-          <Section title={t('admin.pendingTitle')} action={pending.length ? t('home.seeAll') : undefined} onAction={() => router.navigate('/admin/vendors')}>
-            {pending.length === 0 ? (
-              <Card>
-                <T variant="small">{t('admin.pendingNone')}</T>
-              </Card>
-            ) : (
-              pending.slice(0, 3).map((v) => (
-                <Card key={v.user_id} style={{ marginBottom: spacing.sm }}>
-                  <Row style={{ alignItems: 'flex-start' }} gap={spacing.md}>
-                    <HouseAvatar uri={v.logo_url} name={v.business_name} size={40} bg={colors.teal} />
+          <SectionLabel title={t('admin.pendingTitle')} action={pending.length ? t('home.seeAll') : undefined} onAction={() => router.navigate('/admin/vendors')} />
+          {pending.length === 0 ? (
+            <EmptyPanel icon="checkmark-done-outline" title={t('admin.pendingNone')} />
+          ) : (
+            pending.slice(0, 3).map((v, i) => (
+              // Approved applications slide out and the rest close the gap.
+              <Animated.View key={v.user_id} entering={enter(i)} exiting={FadeOutLeft.duration(260)} layout={LinearTransition.springify().damping(18)} style={{ marginBottom: spacing.md }}>
+                <Panel variant="attention">
+                  <View style={styles.row}>
+                    <HouseAvatar uri={v.logo_url} name={v.business_name} size={44} bg={admin.primary} color={admin.primaryForeground} />
                     <View style={{ flex: 1 }}>
-                      <T variant="h3" style={{ fontFamily: fonts.extrabold, color: colors.navy }}>{v.business_name}</T>
-                      <T variant="small">{v.owner_name} · {cityLabel(v.city)}</T>
-                      <T variant="caption">{v.services.map(serviceLabel).join(' · ')}</T>
+                      <Txt style={adminText.title} numberOfLines={1}>{v.business_name}</Txt>
+                      <Txt style={adminText.sub} numberOfLines={1}>{v.owner_name} · {cityLabel(v.city)}</Txt>
+                      <Txt style={adminText.caption} numberOfLines={1}>{v.services.map(serviceLabel).join(' · ')}</Txt>
                     </View>
-                    <T variant="caption" style={{ color: colors.amberDark, fontFamily: fonts.bold }}>{t('admin.stepOf', { n: v.verification_step })}</T>
-                  </Row>
-                  <Row style={{ marginTop: spacing.md }} gap={spacing.sm}>
-                    <Button title={t('admin.review')} kind="secondary" small style={{ flex: 1 }} onPress={() => router.navigate('/admin/vendors')} />
-                    <Button title={t('admin.approve')} icon="checkmark" small style={{ flex: 1 }} onPress={() => approveVendor(v.user_id)} />
-                  </Row>
-                </Card>
-              ))
-            )}
-          </Section>
-
-          <Section title={t('admin.recentTitle')} action={t('home.seeAll')} onAction={() => router.navigate('/admin/users')}>
-            <Card style={{ paddingVertical: spacing.sm }}>
-              {profiles.slice(0, 6).map((p, i) => (
-                <Row key={p.id} style={[{ paddingVertical: spacing.sm }, i > 0 && styles.divider]} gap={spacing.md}>
-                  <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={36} bg={ROLE_COLOR[p.role]} color={p.role === 'vendor' ? colors.navy : colors.white} />
-                  <View style={{ flex: 1 }}>
-                    <T variant="bodyStrong" numberOfLines={1} style={{ color: colors.navy }}>{p.full_name || p.email}</T>
-                    <T variant="caption" numberOfLines={1}>{p.email} · {dateLabel(p.created_at)}</T>
+                    <Pill label={t('admin.stepOf', { n: v.verification_step })} tone="attention" dot />
                   </View>
-                  <Swatch color={ROLE_COLOR[p.role]} label={t(ROLE_LABEL[p.role])} />
-                </Row>
-              ))}
-              {profiles.length === 0 && <T variant="small" style={{ paddingVertical: spacing.sm }}>{t('admin.noUsers')}</T>}
-            </Card>
-          </Section>
-        </>
+                  <View style={[styles.row, { marginTop: spacing.md }]}>
+                    <AdminButton title={t('admin.review')} variant="outline" tone="neutral" size="sm" style={{ flex: 1 }} onPress={() => router.navigate('/admin/vendors')} />
+                    <AdminButton title={t('admin.approve')} icon="checkmark" size="sm" style={{ flex: 1 }} onPress={() => approveVendor(v.user_id)} />
+                  </View>
+                </Panel>
+              </Animated.View>
+            ))
+          )}
+
+          <SectionLabel title={t('admin.recentTitle')} action={t('home.seeAll')} onAction={() => router.navigate('/admin/users')} />
+          <Panel style={{ paddingVertical: spacing.xs }}>
+            {profiles.slice(0, 6).map((p, i) => (
+              <View key={p.id} style={[styles.row, styles.listRow, i > 0 && styles.divider]}>
+                <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={38} bg={ROLE_AVATAR[p.role]} color={p.role === 'admin' ? admin.foreground : admin.primaryForeground} />
+                <View style={{ flex: 1 }}>
+                  <Txt style={adminText.title} numberOfLines={1}>{p.full_name || p.email}</Txt>
+                  <Txt style={adminText.caption} numberOfLines={1}>{p.email} · {dateLabel(p.created_at)}</Txt>
+                </View>
+                <Pill label={t(ROLE_LABEL[p.role])} tone={p.role === 'customer' ? 'primary' : p.role === 'vendor' ? 'attention' : 'neutral'} />
+              </View>
+            ))}
+            {profiles.length === 0 && <Txt style={[adminText.sub, { paddingVertical: spacing.md }]}>{t('admin.noUsers')}</Txt>}
+          </Panel>
+        </View>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.lg },
-  stat: { flexGrow: 1, flexBasis: 150, backgroundColor: colors.white, borderRadius: 14, padding: spacing.lg, borderWidth: 1.5, borderColor: colors.line, gap: 6 },
-  statHot: { backgroundColor: colors.amber, borderColor: colors.amber },
-  statValue: { fontFamily: fonts.extrabold, fontSize: 28, lineHeight: 34, color: colors.navy, letterSpacing: -0.6 },
-  divider: { borderTopWidth: 1, borderColor: colors.line },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xl },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  listRow: { paddingVertical: spacing.md },
+  divider: { borderTopWidth: 1, borderTopColor: admin.border },
 });

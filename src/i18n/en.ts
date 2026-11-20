@@ -791,6 +791,11 @@ export const en = {
   'account.deleteFailed': 'Could not delete your account',
   'result.regensUsedTitle': 'No free regenerations left',
   'result.regensUsed': 'You have used the free regenerations for this design. Use Edit design or start a new design to try more ideas.',
+  'admin.greeting': 'Welcome back, {name}',
+  'admin.needsReview': '{n} vendor applications need your review',
+  'admin.needsReview.one': '1 vendor application needs your review',
+  'admin.allClear': 'All clear. No applications are waiting.',
+  'admin.tapToReview': 'Tap to review',
 } satisfies Record<string, string>;
 
 export type TKey = keyof typeof en;

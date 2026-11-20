@@ -1,19 +1,23 @@
 /**
  * Shapes taken from the RennovaAI logo, used across the signed-in app:
  * the house outline (pointed roof), the perspective floor, the 4-pane window and the amber sparkle.
- * Everything is flat colour, like the mark itself: no gradients, glows or drop shadows.
+ * Everything is flat colour, like the mark itself: no gradients, glows or drop shadows. Motion (see
+ * motion.tsx) brings them to life: the hero divide drifts, tabs pop, the sparkle turns.
  */
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type ImageSourcePropType, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { Easing, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { ClipPath, Defs, G, Image as SvgImage, Path, Polygon, Rect } from 'react-native-svg';
+import Svg, { ClipPath, Defs, G, Image as SvgImage, Path, Polygon } from 'react-native-svg';
 import { useT } from '../i18n';
 import type { Role } from '../lib/supabase';
 import { colors, fonts, spacing } from '../theme';
+import { admin } from '../theme/admin';
 import { initialsOf } from './Avatar';
+import { AnimatedPressable, useBreathe, usePressScale, useSpin } from './motion';
 import { tap, Txt } from './ui';
 
 /** Each role's colour from the logo: customers teal, vendors amber, admins navy. */
@@ -151,30 +155,67 @@ export function HouseBeforeAfter({ width, before, after, beforeLabel, afterLabel
   const w = width - frame * 2;
   const h = Math.round(w * 0.97);
   const roof = Math.round(w * 0.23);
+  const H = h + frame * 2 + 2;
+  // The divide between "before" and "after" drifts on its own, so the hero keeps showing the change.
+  const split = useSharedValue(0.5);
+  const reduced = useReducedMotion();
+  useEffect(() => {
+    if (reduced) return;
+    const ease = Easing.inOut(Easing.cubic);
+    split.value = withRepeat(
+      withSequence(
+        withDelay(1400, withTiming(0.2, { duration: 1700, easing: ease })),
+        withDelay(700, withTiming(0.8, { duration: 2400, easing: ease })),
+        withDelay(700, withTiming(0.5, { duration: 1600, easing: ease })),
+      ),
+      -1,
+    );
+  }, [split, reduced]);
+  const afterPane = useAnimatedStyle(() => ({ left: frame + w * split.value }));
+  const afterImage = useAnimatedStyle(() => ({ transform: [{ translateX: -(frame + w * split.value) }] }));
+  const line = useAnimatedStyle(() => {
+    const x = frame + w * split.value;
+    // Start the line just under the sloped roof at this point.
+    const top = frame + 2 + roof * Math.min(1, Math.abs(split.value - 0.5) * 2) + 4;
+    return { left: x - 2, top, height: frame + 2 + h - top };
+  });
+  const knob = useAnimatedStyle(() => ({ left: frame + w * split.value - 20 }));
+  const twinkle = useBreathe(0.12, 900);
+
   return (
     <View style={{ width, alignItems: 'center' }}>
-      <View style={{ width, height: h + frame * 2 + 2 }}>
-        <Svg width={width} height={h + frame * 2 + 2}>
-          <Polygon points={housePoints(width, h + frame * 2 + 2, roof + 3)} fill={colors.white} />
+      <View style={{ width, height: H }}>
+        <Svg width={width} height={H}>
+          <Polygon points={housePoints(width, H, roof + 3)} fill={colors.white} />
           <Defs>
             <ClipPath id="hba-house">
               <Polygon points={housePoints(w, h, roof, frame, frame + 2)} />
             </ClipPath>
-            <ClipPath id="hba-right">
-              <Rect x={frame + w / 2} y={0} width={w / 2} height={h + frame * 2} />
-            </ClipPath>
           </Defs>
           <G clipPath="url(#hba-house)">
             <SvgImage href={before} x={frame} y={frame + 2} width={w} height={h} preserveAspectRatio="xMidYMid slice" />
-            <G clipPath="url(#hba-right)">
-              <SvgImage href={after} x={frame} y={frame + 2} width={w} height={h} preserveAspectRatio="xMidYMid slice" />
-            </G>
-            <Rect x={frame + w / 2 - 2} y={frame + 2 + roof * 0.25} width={4} height={h} fill={colors.amber} />
           </G>
         </Svg>
-        <View style={[styles.handle, { left: width / 2 - 20, top: frame + roof + (h - roof) / 2 - 20 }]}>
-          <Sparkle size={26} />
-        </View>
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', top: 0, bottom: 0, right: 0, overflow: 'hidden' }, afterPane]}>
+          <Animated.View style={[{ position: 'absolute', top: 0, left: 0, width, height: H }, afterImage]}>
+            <Svg width={width} height={H}>
+              <Defs>
+                <ClipPath id="hba-house-after">
+                  <Polygon points={housePoints(w, h, roof, frame, frame + 2)} />
+                </ClipPath>
+              </Defs>
+              <G clipPath="url(#hba-house-after)">
+                <SvgImage href={after} x={frame} y={frame + 2} width={w} height={h} preserveAspectRatio="xMidYMid slice" />
+              </G>
+            </Svg>
+          </Animated.View>
+        </Animated.View>
+        <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: 4, backgroundColor: colors.amber }, line]} />
+        <Animated.View pointerEvents="none" style={[styles.handle, { top: frame + roof + (h - roof) / 2 - 20 }, knob]}>
+          <Animated.View style={twinkle}>
+            <Sparkle size={26} />
+          </Animated.View>
+        </Animated.View>
         <View style={[styles.tag, { left: frame + 12, bottom: frame + 12, backgroundColor: colors.navy }]}>
           <Txt style={[styles.tagText, { color: colors.white }]}>{beforeLabel}</Txt>
         </View>
@@ -273,14 +314,59 @@ function FloorStrip({ color }: { color: string }) {
  * Flat tab bar: the active tab sits on a small house shape. `center` adds the amber sparkle
  * (the main "new design" action) in the middle; `dark` is the admin's navy version.
  */
+/** One tab: when it becomes active its house backdrop pops in and the icon hops up. */
+function TabItem({ focused, label, onPress, houseColor, labelColor, children }: { focused: boolean; label: string; onPress: () => void; houseColor: string; labelColor: string; children: ReactNode }) {
+  const on = useSharedValue(focused ? 1 : 0);
+  useEffect(() => {
+    on.value = withSpring(focused ? 1 : 0, { damping: 13, stiffness: 220, reduceMotion: ReduceMotion.System });
+  }, [focused, on]);
+  const house = useAnimatedStyle(() => ({ opacity: Math.min(1, on.value * 1.4), transform: [{ scale: 0.55 + 0.45 * on.value }, { translateY: (1 - on.value) * 6 }] }));
+  const icon = useAnimatedStyle(() => ({ transform: [{ translateY: -2 * on.value }, { scale: 1 + 0.1 * on.value }] }));
+  const press = usePressScale(0.9);
+  return (
+    <AnimatedPressable accessibilityRole="tab" aria-selected={focused} accessibilityLabel={label} onPress={onPress} onPressIn={press.onPressIn} onPressOut={press.onPressOut} style={[styles.tab, press.style]}>
+      <View style={styles.iconWrap}>
+        <Animated.View style={[StyleSheet.absoluteFill, house]}>
+          <House width={48} height={38} roof={13} color={houseColor} />
+        </Animated.View>
+        <Animated.View style={[{ marginTop: 6 }, icon]}>{children}</Animated.View>
+      </View>
+      <Txt numberOfLines={1} style={[styles.label, { color: labelColor, fontFamily: focused ? fonts.bold : fonts.semibold }]}>{label}</Txt>
+    </AnimatedPressable>
+  );
+}
+
+/** The amber "new design" button: its sparkle turns slowly and breathes, inviting a tap. */
+function CenterTab({ label, onPress, bg, labelColor }: { label: string; onPress: () => void; bg: string; labelColor: string }) {
+  const spin = useSpin(12000);
+  const breathe = useBreathe(0.07, 1300);
+  const press = usePressScale(0.86);
+  return (
+    <AnimatedPressable accessibilityRole="button" accessibilityLabel={label} onPress={() => { tap(); onPress(); }} onPressIn={press.onPressIn} onPressOut={press.onPressOut} style={[styles.tab, press.style]}>
+      <View style={[styles.starWell, { backgroundColor: bg }]}>
+        <Animated.View style={breathe}>
+          <Animated.View style={spin}>
+            <Sparkle size={60} />
+          </Animated.View>
+        </Animated.View>
+        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+          <Ionicons name="add" size={22} color={colors.navy} />
+        </View>
+      </View>
+      <Txt numberOfLines={1} style={[styles.label, { color: labelColor, fontFamily: fonts.bold }]}>{label}</Txt>
+    </AnimatedPressable>
+  );
+}
+
 export function BrandTabBar({ state, descriptors, emitter, navigateToTab, dark, center }: BottomTabBarProps & { dark?: boolean; center?: { label: string; onPress: () => void } }) {
   const insets = useSafeAreaInsets();
   const { ur } = useT();
-  const bg = dark ? colors.navy : colors.white;
-  const off = dark ? '#8FA3C2' : colors.textSubtle;
-  const onIcon = dark ? colors.navy : colors.tealDark;
-  const onBg = dark ? colors.amber : colors.tealTint;
-  const onLabel = dark ? colors.white : colors.tealDark;
+  // `dark` = the admin console (theme/admin.ts): teal marks the active tab, amber stays for attention only.
+  const bg = dark ? admin.bar : colors.white;
+  const off = dark ? admin.subtle : colors.textSubtle;
+  const onIcon = dark ? admin.primary : colors.tealDark;
+  const onBg = dark ? admin.primarySoft : colors.tealTint;
+  const onLabel = dark ? admin.foreground : colors.tealDark;
 
   const items: ReactNode[] = state.routes.map((route, index) => {
     const { options } = descriptors[route.key];
@@ -292,13 +378,9 @@ export function BrandTabBar({ state, descriptors, emitter, navigateToTab, dark, 
       if (!focused && !event.defaultPrevented) navigateToTab(route.key);
     };
     return (
-      <Pressable key={route.key} accessibilityRole="tab" aria-selected={focused} accessibilityLabel={label} onPress={onPress} style={styles.tab}>
-        <View style={styles.iconWrap}>
-          {focused && <House width={48} height={38} roof={13} color={onBg} style={StyleSheet.absoluteFill} />}
-          <View style={{ marginTop: 6 }}>{options.tabBarIcon?.({ focused, color: focused ? onIcon : off, size: 22 })}</View>
-        </View>
-        <Txt numberOfLines={1} style={[styles.label, { color: focused ? onLabel : off, fontFamily: focused ? fonts.bold : fonts.semibold }]}>{label}</Txt>
-      </Pressable>
+      <TabItem key={route.key} focused={focused} label={label} onPress={onPress} houseColor={onBg} labelColor={focused ? onLabel : off}>
+        {options.tabBarIcon?.({ focused, color: focused ? onIcon : off, size: 22 })}
+      </TabItem>
     );
   });
 
@@ -306,20 +388,12 @@ export function BrandTabBar({ state, descriptors, emitter, navigateToTab, dark, 
     items.splice(
       Math.ceil(items.length / 2),
       0,
-      <Pressable key="center" accessibilityRole="button" accessibilityLabel={center.label} onPress={() => { tap(); center.onPress(); }} style={styles.tab}>
-        <View style={[styles.starWell, { backgroundColor: bg }]}>
-          <Sparkle size={60} />
-          <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-            <Ionicons name="add" size={22} color={colors.navy} />
-          </View>
-        </View>
-        <Txt numberOfLines={1} style={[styles.label, { color: dark ? colors.white : colors.navy, fontFamily: fonts.bold }]}>{center.label}</Txt>
-      </Pressable>,
+      <CenterTab key="center" label={center.label} onPress={center.onPress} bg={bg} labelColor={dark ? colors.white : colors.navy} />,
     );
   }
 
   return (
-    <View style={[styles.bar, { backgroundColor: bg, paddingBottom: insets.bottom + 6, minHeight: (ur ? 78 : 66) + insets.bottom }, !dark && styles.barRule]}>
+    <View style={[styles.bar, { backgroundColor: bg, paddingBottom: insets.bottom + 6, minHeight: (ur ? 78 : 66) + insets.bottom }, dark ? { borderTopWidth: 1, borderTopColor: admin.border } : styles.barRule]}>
       {items}
     </View>
   );

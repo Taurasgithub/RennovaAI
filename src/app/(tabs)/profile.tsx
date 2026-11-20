@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { confirmAction } from '../../lib/dialogs';
+import { CountUp } from '../../components/motion';
 import { Badge, Button, Card, Chip, IconTile, Row, Screen, Section, T, tap, type IconName } from '../../components/ui';
 import { config } from '../../config';
 import { useAuth } from '../../auth/AuthProvider';
@@ -66,8 +67,8 @@ export default function Profile() {
         onEdit={() => router.push('/profile-edit')}
         extra={
           <Row style={{ marginTop: spacing.lg }} gap={spacing.sm}>
-            <View style={styles.stat}><T variant="h2" style={{ color: colors.navy, fontFamily: fonts.extrabold }}>{designs.length}</T><T variant="caption">{t('profile.statDesigns')}</T></View>
-            <View style={styles.stat}><T variant="h2" style={{ color: colors.navy, fontFamily: fonts.extrabold }}>{bookingCount}</T><T variant="caption">{t('profile.statProjects')}</T></View>
+            <View style={styles.stat}><CountUp value={designs.length} style={styles.statValue} /><T variant="caption">{t('profile.statDesigns')}</T></View>
+            <View style={styles.stat}><CountUp value={bookingCount} style={styles.statValue} /><T variant="caption">{t('profile.statProjects')}</T></View>
             {config.premiumEnabled && (
               <View style={styles.stat}><T variant="h2" style={{ color: colors.teal, fontFamily: fonts.extrabold }}>{designs.filter((d) => d.premium).length}</T><T variant="caption">{t('profile.statPremium')}</T></View>
             )}
@@ -152,6 +153,7 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
+  statValue: { color: colors.navy, fontFamily: fonts.extrabold, fontSize: 22, lineHeight: 28 },
   stat: { flex: 1, alignItems: 'center', borderRadius: 12, borderWidth: 1.5, borderColor: colors.line, paddingVertical: spacing.md },
   item: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   styleTag: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 32, paddingRight: 12, borderRadius: 8, backgroundColor: colors.mist, overflow: 'hidden' },

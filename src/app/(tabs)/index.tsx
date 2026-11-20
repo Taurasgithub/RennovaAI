@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HouseAvatar, HouseBeforeAfter, Marker, Sparkle } from '../../components/brand';
+import { enter, enterFromSide, Tappable, useBreathe } from '../../components/motion';
 import { DesignThumb } from '../../components/DesignPreview';
 import { RoomIllustration } from '../../components/RoomIllustration';
 import { Button, Card, IconTile, Row, Section, T, tap, Txt } from '../../components/ui';
@@ -44,12 +46,22 @@ export default function Home() {
   };
 
   const heroW = Math.min(width - 72, 340);
+  // Scroll-driven motion: the hero drifts slower than the page (parallax) and the header stretches on pull-down.
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+  const heroParallax = useAnimatedStyle(() => ({
+    transform: [{ translateY: scrollY.value > 0 ? scrollY.value * 0.18 : 0 }, { scale: scrollY.value < 0 ? 1 - scrollY.value / 900 : 1 }],
+  }));
+  const bandStretch = useAnimatedStyle(() => ({ transform: [{ scaleY: scrollY.value < 0 ? 1 - (scrollY.value * 2) / 236 : 1 }], transformOrigin: 'bottom' }));
+  const sparkleBreathe = useBreathe(0.18, 1100);
   const [tag1, tag2] = t('home.heroTitle').split('\n');
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.white }} contentContainerStyle={{ paddingBottom: spacing.xxxl }} showsVerticalScrollIndicator={false}>
-      {/* Teal header; the house-shaped before/after sits half on it, half below it. */}
-      <View style={[styles.band, { height: insets.top + 236 }]} />
+    <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} style={{ flex: 1, backgroundColor: colors.white }} contentContainerStyle={{ paddingBottom: spacing.xxxl }} showsVerticalScrollIndicator={false}>
+      {/* Teal header; the house-shaped before/after sits half on it, half below it. It stretches when pulled down. */}
+      <Animated.View style={[styles.band, { height: insets.top + 236 }, bandStretch]} />
       <View style={{ paddingTop: insets.top + spacing.md, paddingHorizontal: spacing.lg }}>
         <Row style={{ justifyContent: 'space-between' }}>
           <Pressable onPress={() => router.push('/(tabs)/profile')} accessibilityRole="button" style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 1 }}>
@@ -65,20 +77,26 @@ export default function Home() {
           </Pressable>
         </Row>
 
-        <Pressable onPress={() => startDesign()} accessibilityRole="button" accessibilityLabel={t('home.heroCta')} style={{ alignItems: 'center', marginTop: spacing.xl }}>
-          <HouseBeforeAfter width={heroW} before={BEFORE} after={AFTER} beforeLabel={t('ba.before')} afterLabel={t('ba.after')} />
-        </Pressable>
+        <Animated.View style={heroParallax}>
+          <Tappable scale={0.98} onPress={() => startDesign()} accessibilityRole="button" accessibilityLabel={t('home.heroCta')} entering={enter(1)} style={{ alignItems: 'center', marginTop: spacing.xl }}>
+            <HouseBeforeAfter width={heroW} before={BEFORE} after={AFTER} beforeLabel={t('ba.before')} afterLabel={t('ba.after')} />
+          </Tappable>
+        </Animated.View>
 
         {/* The logo's tagline */}
-        <View style={{ marginTop: spacing.lg }}>
+        <Animated.View entering={enter(2)} style={{ marginTop: spacing.lg }}>
           <T style={[styles.tagline, ur && { textAlign: 'right' }]}>{tag1}</T>
           {!!tag2 && <T style={[styles.tagline, { color: colors.teal }, ur && { textAlign: 'right' }]}>{tag2}</T>}
           <T style={{ marginTop: spacing.sm, alignSelf: ur ? 'flex-end' : 'flex-start' }}>{t('home.heroBody')}</T>
-        </View>
-        <Pressable onPress={() => startDesign()} accessibilityRole="button" style={({ pressed }) => [styles.cta, pressed && { opacity: 0.9 }]}>
-          <Sparkle size={20} />
-          <Txt style={styles.ctaText}>{t('home.heroCta')}</Txt>
-        </Pressable>
+        </Animated.View>
+        <Animated.View entering={enter(3)}>
+          <Tappable onPress={() => startDesign()} accessibilityRole="button" scale={0.95} style={styles.cta}>
+            <Animated.View style={sparkleBreathe}>
+              <Sparkle size={20} />
+            </Animated.View>
+            <Txt style={styles.ctaText}>{t('home.heroCta')}</Txt>
+          </Tappable>
+        </Animated.View>
       </View>
 
       {active && (
@@ -107,15 +125,15 @@ export default function Home() {
 
       <Section title={t('home.renovating')} style={{ paddingHorizontal: spacing.lg }} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
-        {ROOM_TYPES.map((r) => (
-          <Pressable key={r.id} accessibilityRole="button" accessibilityLabel={roomLabel(r.id)} onPress={() => { tap(); startDesign({ roomTypeId: r.id, area: r.defaultArea }); }} style={({ pressed }) => [styles.roomTile, pressed && { backgroundColor: colors.teal }]}>
+        {ROOM_TYPES.map((r, i) => (
+          <Tappable key={r.id} entering={enterFromSide(i)} scale={0.92} accessibilityRole="button" accessibilityLabel={roomLabel(r.id)} onPress={() => { tap(); startDesign({ roomTypeId: r.id, area: r.defaultArea }); }}>
             {({ pressed }) => (
-              <>
+              <View style={[styles.roomTile, pressed && { backgroundColor: colors.teal }]}>
                 <Ionicons name={r.icon} size={26} color={pressed ? colors.white : colors.navy} />
                 <T variant="small" numberOfLines={1} style={{ color: pressed ? colors.white : colors.navy, fontFamily: fonts.bold, marginTop: spacing.sm }}>{roomLabel(r.id)}</T>
-              </>
+              </View>
             )}
-          </Pressable>
+          </Tappable>
         ))}
       </ScrollView>
 
@@ -123,12 +141,12 @@ export default function Home() {
         <>
           <Section title={t('home.yourDesigns')} action={t('home.seeAll')} onAction={() => router.push('/(tabs)/designs')} style={{ paddingHorizontal: spacing.lg }} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
-            {designs.slice(0, 6).map((d) => (
-              <Pressable key={d.id} onPress={() => router.push({ pathname: '/design/result', params: { id: d.id } })} style={{ width: 170 }}>
+            {designs.slice(0, 6).map((d, i) => (
+              <Tappable key={d.id} entering={enterFromSide(i)} onPress={() => router.push({ pathname: '/design/result', params: { id: d.id } })} style={{ width: 170 }}>
                 <DesignThumb {...d} height={120} />
                 <T variant="bodyStrong" numberOfLines={1} style={{ marginTop: 6 }}>{designName(d)}</T>
                 <T variant="caption">{pkr(d.estimate.low)} – {pkr(d.estimate.high)}</T>
-              </Pressable>
+              </Tappable>
             ))}
           </ScrollView>
         </>
@@ -165,11 +183,11 @@ export default function Home() {
 
       <Section title={t('home.exploreStyles')} style={{ paddingHorizontal: spacing.lg }}>
         <View style={styles.grid}>
-          {orderedStyles.map((s) => {
+          {orderedStyles.map((s, i) => {
             const pal = PALETTES[(STYLES.indexOf(s) * 3 + 1) % PALETTES.length];
             const fav = favouriteIds.includes(s.id);
             return (
-              <Pressable key={s.id} accessibilityRole="button" onPress={() => { tap(); startDesign({ styleId: s.id, paletteId: pal.id }); }} style={[styles.styleCard, fav && { borderColor: colors.teal, borderWidth: 1.5 }]}>
+              <Tappable key={s.id} entering={enter(i)} accessibilityRole="button" onPress={() => { tap(); startDesign({ styleId: s.id, paletteId: pal.id }); }} style={[styles.styleCard, fav && { borderColor: colors.teal, borderWidth: 1.5 }]}>
                 <View style={{ height: 96 }}>
                   <RoomIllustration styleId={s.id} paletteId={pal.id} flooringId={s.id === 'luxury' ? 'marble' : s.id === 'scandinavian' ? 'laminate' : 'porcelain'} ceilingId={s.id === 'luxury' ? 'cove' : 'gypsum'} />
                   {fav && (
@@ -182,7 +200,7 @@ export default function Home() {
                   <T variant="bodyStrong">{styleLabel(s.id)}</T>
                   <T variant="caption" numberOfLines={1}>{styleBlurb(s.id)}</T>
                 </View>
-              </Pressable>
+              </Tappable>
             );
           })}
         </View>
@@ -204,7 +222,7 @@ export default function Home() {
         </Section>
 
       </View>
-    </ScrollView>
+    </Animated.ScrollView>
   );
 }
 

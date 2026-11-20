@@ -1,12 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Redirect, Slot, Tabs, usePathname, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useAuth } from '../../auth/AuthProvider';
 import { BrandTabBar, Sparkle } from '../../components/brand';
 import { tap, Txt, type IconName } from '../../components/ui';
 import { useT, type TKey } from '../../i18n';
-import { colors, fonts, spacing } from '../../theme';
+import { fonts, spacing } from '../../theme';
+import { admin } from '../../theme/admin';
 
 const NAV: { href: '/admin' | '/admin/vendors' | '/admin/users' | '/admin/account'; name: string; label: TKey; icon: IconName; active: IconName }[] = [
   { href: '/admin', name: 'index', label: 'admin.tabOverview', icon: 'speedometer-outline', active: 'speedometer' },
@@ -24,14 +26,16 @@ export default function AdminLayout() {
   const auth = useAuth();
   if (!auth.enabled || (auth.ready && auth.profile?.role !== 'admin')) return <Redirect href="/" />;
   // Don't mount admin screens (which query every account) until the role is known.
-  if (!auth.ready || !auth.profile) return <ActivityIndicator color={colors.teal} style={{ flex: 1 }} />;
+  if (!auth.ready || !auth.profile) return <ActivityIndicator color={admin.primary} style={{ flex: 1, backgroundColor: admin.background }} />;
 
   if (width >= WIDE) return <Sidebar />;
 
   return (
+    <>
+    <StatusBar style="light" />
     <Tabs
-      screenOptions={{ headerShown: false }}
-      // Admin gets the navy bar; the active tab sits on an amber house.
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: admin.background } }}
+      // Admin console bar (theme/admin.ts): the active tab sits on a teal house.
       tabBar={(props) => <BrandTabBar {...props} dark />}
     >
       {NAV.map((n) => (
@@ -42,6 +46,7 @@ export default function AdminLayout() {
         />
       ))}
     </Tabs>
+    </>
   );
 }
 
@@ -53,12 +58,13 @@ function Sidebar() {
 
   return (
     <View style={styles.shell}>
+      <StatusBar style="light" />
       <View style={styles.sidebar}>
         <View style={styles.brand}>
           <Image source={require('../../../assets/images/logo-mark.png')} style={{ width: 38, height: 38 }} contentFit="contain" />
           <View>
             <Text style={styles.wordmark}>
-              Rennova<Text style={{ color: colors.teal }}>AI</Text>
+              Rennova<Text style={{ color: admin.primary }}>AI</Text>
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Sparkle size={10} />
@@ -80,8 +86,9 @@ function Sidebar() {
               // `hovered` exists on web (react-native-web) but not in the native Pressable types.
               style={(state) => [styles.navItem, on && styles.navOn, (state as { hovered?: boolean }).hovered && !on && styles.navHover]}
             >
-              <Ionicons name={on ? n.active : n.icon} size={19} color={on ? colors.navy : 'rgba(255,255,255,0.75)'} />
-              <Txt style={[styles.navText, on && { color: colors.navy, fontFamily: fonts.bold }]}>{t(n.label)}</Txt>
+              {on && <View style={styles.navMarker} />}
+              <Ionicons name={on ? n.active : n.icon} size={19} color={on ? admin.primary : admin.muted} />
+              <Txt style={[styles.navText, on && { color: admin.foreground, fontFamily: fonts.bold }]}>{t(n.label)}</Txt>
             </Pressable>
           );
         })}
@@ -98,16 +105,17 @@ function Sidebar() {
 }
 
 const styles = StyleSheet.create({
-  shell: { flex: 1, flexDirection: 'row', backgroundColor: colors.mist },
-  sidebar: { width: 240, backgroundColor: colors.navy, paddingVertical: spacing.xl, paddingHorizontal: spacing.md, gap: 4 },
+  shell: { flex: 1, flexDirection: 'row', backgroundColor: admin.background },
+  sidebar: { width: 248, backgroundColor: admin.bar, borderRightWidth: 1, borderRightColor: admin.border, paddingVertical: spacing.xl, paddingHorizontal: spacing.md, gap: 4 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, marginBottom: spacing.xl },
-  wordmark: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.white, letterSpacing: -0.4 },
-  brandSub: { fontFamily: fonts.medium, fontSize: 11.5, color: 'rgba(255,255,255,0.6)' },
+  wordmark: { fontFamily: fonts.extrabold, fontSize: 20, color: admin.foreground, letterSpacing: -0.4 },
+  brandSub: { fontFamily: fonts.medium, fontSize: 11.5, color: admin.muted },
   navItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.md, paddingVertical: 11, borderRadius: 10 },
-  navOn: { backgroundColor: colors.amber },
-  navHover: { backgroundColor: 'rgba(255,255,255,0.08)' },
-  navText: { fontFamily: fonts.semibold, fontSize: 14.5, color: 'rgba(255,255,255,0.8)' },
-  me: { fontFamily: fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.55)', paddingHorizontal: spacing.sm },
+  navOn: { backgroundColor: admin.primarySoft },
+  navHover: { backgroundColor: admin.pressed },
+  navMarker: { position: 'absolute', left: 0, top: 9, bottom: 9, width: 3, borderRadius: 2, backgroundColor: admin.primary },
+  navText: { fontFamily: fonts.semibold, fontSize: 14.5, color: admin.muted },
+  me: { fontFamily: fonts.medium, fontSize: 12, color: admin.subtle, paddingHorizontal: spacing.sm },
   content: { flex: 1 },
   contentInner: { flex: 1, width: '100%', maxWidth: 1100, alignSelf: 'center' },
 });
