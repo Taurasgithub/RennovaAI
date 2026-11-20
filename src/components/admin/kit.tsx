@@ -1,17 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState, type ReactNode } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState, type ComponentProps, type ReactNode } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { admin, toneColors, type AdminTone } from '../../theme/admin';
 import { fonts, spacing } from '../../theme';
 import { Sparkle } from '../brand';
 import { CountUp, Skeleton, Tappable } from '../motion';
-import { tap, Txt, type IconName } from '../ui';
+import { Screen, tap, Txt, type IconName } from '../ui';
 
 /**
  * Admin console kit. Components take variants (solid / soft / outline / ghost, tone, size) instead of
  * ad-hoc styles, and use only the semantic tokens in theme/admin.ts.
  */
+
+/* ---------- Screen with the gradient backdrop ---------- */
+
+/** The console backdrop: a pale background with the logo-teal band across the top. */
+export function AdminBackdrop() {
+  const insets = useSafeAreaInsets();
+  // The teal band covers the status bar and the screen title; cards scroll up over it.
+  return (
+    <LinearGradient pointerEvents="none" colors={admin.band} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.band, { height: insets.top + BAND_HEIGHT }]}>
+      <Sparkle size={110} color="rgba(255,255,255,0.07)" style={styles.bandSparkle} />
+    </LinearGradient>
+  );
+}
+
+/** Height of the teal band below the status bar: it ends just inside the first row of cards. */
+const BAND_HEIGHT = 168;
+
+/** Every admin screen: the shared Screen (keyboard handling, staggered entrance) over the backdrop. */
+export function AdminScreen(props: Omit<ComponentProps<typeof Screen>, 'bg' | 'back'>) {
+  return (
+    <View style={{ flex: 1, backgroundColor: admin.background }}>
+      <StatusBar style="light" />
+      <AdminBackdrop />
+      <Screen back={false} bg="transparent" {...props} />
+    </View>
+  );
+}
 
 /* ---------- Header ---------- */
 
@@ -27,11 +57,6 @@ export function AdminHeader({ kicker, title, sub, right }: { kicker: string; tit
       </View>
       <Txt style={styles.title}>{title}</Txt>
       {!!sub && <Txt style={styles.sub}>{sub}</Txt>}
-      <View style={styles.headerRule}>
-        <View style={{ flex: 2, backgroundColor: admin.primary }} />
-        <View style={{ flex: 1, backgroundColor: admin.attention }} />
-        <View style={{ flex: 7, backgroundColor: admin.border }} />
-      </View>
     </View>
   );
 }
@@ -81,9 +106,9 @@ export function AdminButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const c = toneColors[tone];
-  const solidFg = tone === 'attention' ? admin.attentionForeground : tone === 'danger' ? admin.background : admin.primaryForeground;
+  const solidFg = tone === 'attention' ? admin.attentionForeground : admin.primaryForeground;
   const look: Record<ButtonVariant, { bg: string; border: string; fg: string }> = {
-    solid: { bg: c.fg, border: c.fg, fg: solidFg },
+    solid: { bg: tone === 'primary' ? admin.primaryText : c.fill, border: 'transparent', fg: solidFg },
     soft: { bg: c.soft, border: 'transparent', fg: c.fg },
     outline: { bg: 'transparent', border: c.line, fg: c.fg },
     ghost: { bg: 'transparent', border: 'transparent', fg: c.fg },
@@ -102,6 +127,9 @@ export function AdminButton({
       }}
       style={[styles.btn, size === 'sm' && styles.btnSm, { backgroundColor: l.bg, borderColor: l.border, opacity: off ? 0.5 : 1 }, style]}
     >
+      {variant === 'solid' && tone === 'primary' && (
+        <LinearGradient colors={admin.primaryGradient} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[StyleSheet.absoluteFill, { borderRadius: size === 'sm' ? 11 : 13 }]} />
+      )}
       {loading ? (
         <ActivityIndicator color={l.fg} size="small" />
       ) : (
@@ -156,7 +184,7 @@ export function Segmented<K extends string>({ items, value, onChange }: { items:
           <Tappable key={it.id} scale={0.94} accessibilityRole="tab" aria-selected={on} onLayout={measure(it.id)} onPress={() => { tap(); onChange(it.id); }} style={styles.segItem}>
             <Txt style={[styles.segText, on && { color: admin.primaryForeground, fontFamily: fonts.bold }]}>{it.label}</Txt>
             {it.count !== undefined && (
-              <View style={[styles.segCount, { backgroundColor: on ? 'rgba(13,16,18,0.18)' : countTone.soft }]}>
+              <View style={[styles.segCount, { backgroundColor: on ? 'rgba(255,255,255,0.22)' : countTone.soft }]}>
                 <Txt style={[styles.segCountText, { color: on ? admin.primaryForeground : countTone.fg }]}>{it.count}</Txt>
               </View>
             )}
@@ -180,7 +208,7 @@ export function StatTile({ label, value, icon, tone = 'neutral', hint, onPress }
         </View>
         {onPress && <Ionicons name="arrow-forward" size={16} color={admin.subtle} />}
       </View>
-      <CountUp value={value} style={[styles.statValue, hot && { color: admin.attention }]} />
+      <CountUp value={value} style={[styles.statValue, hot && { color: admin.attentionText }]} />
       <Txt style={styles.statLabel} numberOfLines={1}>{label}</Txt>
       {!!hint && <Txt style={[styles.statHint, { color: c.fg }]} numberOfLines={1}>{hint}</Txt>}
     </Panel>
@@ -193,7 +221,7 @@ export function SearchField({ value, onChangeText, placeholder }: { value: strin
   const [focused, setFocused] = useState(false);
   return (
     <View style={[styles.search, focused && { borderColor: admin.primary }]}>
-      <Ionicons name="search" size={18} color={focused ? admin.primary : admin.subtle} />
+      <Ionicons name="search" size={18} color={focused ? admin.primaryText : admin.subtle} />
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -223,7 +251,7 @@ export function SectionLabel({ title, action, onAction }: { title: string; actio
       {!!action && onAction && (
         <Tappable scale={0.94} hitSlop={8} accessibilityRole="button" onPress={() => { tap(); onAction(); }} style={styles.sectionAction}>
           <Txt style={styles.sectionActionText}>{action}</Txt>
-          <Ionicons name="arrow-forward" size={14} color={admin.primary} />
+          <Ionicons name="arrow-forward" size={14} color={admin.primaryText} />
         </Tappable>
       )}
     </View>
@@ -234,7 +262,7 @@ export function EmptyPanel({ icon, title, body }: { icon: IconName; title: strin
   return (
     <Panel style={{ alignItems: 'center', paddingVertical: spacing.xxl, marginTop: spacing.md }}>
       <View style={[styles.statIcon, { width: 52, height: 52, borderRadius: 16, backgroundColor: admin.primarySoft }]}>
-        <Ionicons name={icon} size={24} color={admin.primary} />
+        <Ionicons name={icon} size={24} color={admin.primaryText} />
       </View>
       <Txt style={[styles.rowTitle, { marginTop: spacing.md, textAlign: 'center' }]}>{title}</Txt>
       {!!body && <Txt style={[styles.rowSub, { textAlign: 'center', marginTop: 4 }]}>{body}</Txt>}
@@ -248,10 +276,10 @@ export function SkeletonList({ rows = 3 }: { rows?: number }) {
       {Array.from({ length: rows }, (_, i) => (
         <Panel key={i}>
           <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center' }}>
-            <Skeleton width={42} height={42} radius={12} color={admin.cardRaised} />
+            <Skeleton width={42} height={42} radius={12} color={admin.edge} />
             <View style={{ flex: 1, gap: 8 }}>
-              <Skeleton width="60%" height={14} color={admin.cardRaised} />
-              <Skeleton width="40%" height={11} color={admin.cardRaised} />
+              <Skeleton width="60%" height={14} color={admin.edge} />
+              <Skeleton width="40%" height={11} color={admin.edge} />
             </View>
           </View>
         </Panel>
@@ -270,13 +298,14 @@ export const adminText = StyleSheet.create({
 
 const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  kicker: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, height: 26, borderRadius: 13, backgroundColor: admin.attentionSoft, alignSelf: 'flex-start' },
-  kickerText: { fontFamily: fonts.bold, fontSize: 11.5, color: admin.attention, letterSpacing: 0.6, textTransform: 'uppercase' },
-  title: { fontFamily: fonts.extrabold, fontSize: 30, lineHeight: 36, color: admin.foreground, letterSpacing: -0.8, marginTop: spacing.md },
-  sub: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: admin.muted, marginTop: 4 },
-  headerRule: { flexDirection: 'row', height: 3, borderRadius: 2, overflow: 'hidden', marginTop: spacing.lg, gap: 3 },
+  band: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden' },
+  bandSparkle: { position: 'absolute', right: -18, top: 18 },
+  kicker: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, height: 26, borderRadius: 13, backgroundColor: admin.onBandSoft, alignSelf: 'flex-start' },
+  kickerText: { fontFamily: fonts.bold, fontSize: 11.5, color: admin.onBand, letterSpacing: 0.6, textTransform: 'uppercase' },
+  title: { fontFamily: fonts.extrabold, fontSize: 30, lineHeight: 36, color: admin.onBand, letterSpacing: -0.8, marginTop: spacing.md },
+  sub: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 20, color: admin.onBandMuted, marginTop: 4 },
 
-  panel: { borderRadius: 18, borderWidth: 1, borderTopColor: admin.edge, padding: spacing.lg },
+  panel: { borderRadius: 18, borderWidth: 1, padding: spacing.lg, shadowColor: admin.shadow, shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
 
   btn: { minHeight: 46, borderRadius: 13, borderWidth: 1.5, paddingHorizontal: spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnSm: { minHeight: 40, borderRadius: 11, paddingHorizontal: spacing.md },
@@ -287,7 +316,7 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3 },
 
   segTrack: { padding: 4, gap: 4, borderRadius: 14, backgroundColor: admin.card, borderWidth: 1, borderColor: admin.border },
-  segHighlight: { position: 'absolute', top: 4, bottom: 4, left: 0, borderRadius: 10, backgroundColor: admin.primary },
+  segHighlight: { position: 'absolute', top: 4, bottom: 4, left: 0, borderRadius: 10, backgroundColor: admin.primaryText },
   segItem: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 14, borderRadius: 10 },
   segText: { fontFamily: fonts.semibold, fontSize: 13.5, color: admin.muted },
   segCount: { minWidth: 22, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
@@ -306,7 +335,7 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xxl, marginBottom: spacing.md },
   sectionTitle: { fontFamily: fonts.extrabold, fontSize: 18, color: admin.foreground, letterSpacing: -0.3 },
   sectionAction: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32 },
-  sectionActionText: { fontFamily: fonts.bold, fontSize: 13.5, color: admin.primary },
+  sectionActionText: { fontFamily: fonts.bold, fontSize: 13.5, color: admin.primaryText },
 
   rowTitle: { fontFamily: fonts.bold, fontSize: 15.5, color: admin.foreground },
   rowSub: { fontFamily: fonts.medium, fontSize: 13, color: admin.muted },

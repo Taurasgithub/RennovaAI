@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 import { RefreshControl, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition, ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useAdminData } from '../../admin/useAdminData';
-import { AdminButton, AdminHeader, adminText, EmptyPanel, Panel, Pill, SearchField, Segmented, SkeletonList } from '../../components/admin/kit';
+import { AdminButton, AdminScreen, AdminHeader, adminText, EmptyPanel, Panel, Pill, SearchField, Segmented, SkeletonList } from '../../components/admin/kit';
 import { ROLE_LABEL } from '../../components/AccountPanel';
 import { HouseAvatar } from '../../components/brand';
 import { Tappable } from '../../components/motion';
-import { Screen, tap, Txt } from '../../components/ui';
+import { tap, Txt } from '../../components/ui';
 import { budgetLabel, cityLabel, styleLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
 import type { Profile, Role } from '../../lib/supabase';
@@ -39,7 +39,7 @@ export default function AdminUsers() {
   const list = data.profiles.filter((p) => matches(p, filter)).filter((p) => !query || `${p.full_name} ${p.email} ${p.phone}`.toLowerCase().includes(query));
 
   return (
-    <Screen back={false} bg={admin.background} refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}>
+    <AdminScreen refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}>
       <AdminHeader kicker={t('role.admin')} title={t('admin.usersTitle')} sub={t('admin.usersSubtitle', { n: data.profiles.length })} />
       <SearchField value={q} onChangeText={setQ} placeholder={t('admin.searchUsers')} />
       <RoleMix profiles={data.profiles} />
@@ -59,7 +59,7 @@ export default function AdminUsers() {
           ))}
         </Panel>
       )}
-    </Screen>
+    </AdminScreen>
   );
 }
 
@@ -89,7 +89,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
         <View style={{ flex: 1 }}>
           <Txt style={[adminText.title, suspended && { color: admin.muted }]} numberOfLines={1}>
             {p.full_name || t('admin.noName')}
-            {isMe ? <Txt style={{ color: admin.primary }}>{`  · ${t('admin.you')}`}</Txt> : null}
+            {isMe ? <Txt style={{ color: admin.primaryText }}>{`  · ${t('admin.you')}`}</Txt> : null}
           </Txt>
           <Txt style={adminText.caption} numberOfLines={1}>{p.email}{p.phone ? ` · ${p.phone}` : ''}</Txt>
           <View style={[styles.row, { gap: 6, marginTop: 6 }]}>

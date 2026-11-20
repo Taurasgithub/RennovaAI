@@ -3,9 +3,9 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import { useAuth } from '../../auth/AuthProvider';
-import { AdminButton, AdminHeader, adminText, Panel, Pill, SectionLabel } from '../../components/admin/kit';
+import { AdminButton, AdminScreen, AdminHeader, adminText, Panel, Pill, SectionLabel } from '../../components/admin/kit';
 import { HouseAvatar } from '../../components/brand';
-import { Screen, Txt } from '../../components/ui';
+import { Txt } from '../../components/ui';
 import { cityLabel, useT } from '../../i18n';
 import { confirmAction, notify } from '../../lib/dialogs';
 import { deleteAccount } from '../../services/account';
@@ -35,7 +35,7 @@ export default function AdminProfileTab() {
     }, true);
 
   return (
-    <Screen back={false} bg={admin.background}>
+    <AdminScreen>
       <AdminHeader kicker={t('role.admin')} title={t('admin.tabAccount')} />
 
       <Panel variant="raised" style={{ marginTop: spacing.xl, alignItems: 'center', paddingVertical: spacing.xl }}>
@@ -75,7 +75,7 @@ export default function AdminProfileTab() {
         }}
       />
       <AdminButton title={t('account.delete')} icon="trash-outline" variant="ghost" tone="danger" size="sm" loading={busy === 'delete'} style={{ marginTop: spacing.sm, alignSelf: 'center' }} onPress={remove} />
-    </Screen>
+    </AdminScreen>
   );
 }
 

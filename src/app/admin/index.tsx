@@ -3,11 +3,11 @@ import { RefreshControl, StyleSheet, View } from 'react-native';
 import Animated, { FadeOutLeft, LinearTransition } from 'react-native-reanimated';
 import { useAdminData } from '../../admin/useAdminData';
 import { useAuth } from '../../auth/AuthProvider';
-import { AdminButton, AdminHeader, adminText, EmptyPanel, Panel, Pill, SectionLabel, SkeletonList, StatTile } from '../../components/admin/kit';
+import { AdminButton, AdminScreen, AdminHeader, adminText, EmptyPanel, Panel, Pill, SectionLabel, SkeletonList, StatTile } from '../../components/admin/kit';
 import { ROLE_LABEL } from '../../components/AccountPanel';
 import { HouseAvatar } from '../../components/brand';
 import { enter } from '../../components/motion';
-import { Screen, Txt } from '../../components/ui';
+import { Txt } from '../../components/ui';
 import { cityLabel, serviceLabel, useT } from '../../i18n';
 import { dateLabel } from '../../lib/format';
 import { admin } from '../../theme/admin';
@@ -24,7 +24,7 @@ export default function AdminOverview() {
   const first = (profile?.full_name || '').split(' ')[0];
 
   return (
-    <Screen back={false} bg={admin.background} refreshControl={<RefreshControl refreshing={false} onRefresh={reload} tintColor={admin.primary} colors={[admin.primary]} />}>
+    <AdminScreen refreshControl={<RefreshControl refreshing={false} onRefresh={reload} tintColor={admin.primary} colors={[admin.primary]} />}>
       <AdminHeader
         kicker={t('role.admin')}
         title={first ? t('admin.greeting', { name: first }) : t('admin.title')}
@@ -75,7 +75,7 @@ export default function AdminOverview() {
           <Panel style={{ paddingVertical: spacing.xs }}>
             {profiles.slice(0, 6).map((p, i) => (
               <View key={p.id} style={[styles.row, styles.listRow, i > 0 && styles.divider]}>
-                <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={38} bg={ROLE_AVATAR[p.role]} color={p.role === 'admin' ? admin.foreground : admin.primaryForeground} />
+                <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={38} bg={ROLE_AVATAR[p.role]} color={p.role === 'admin' ? admin.foreground : p.role === 'vendor' ? admin.attentionForeground : admin.primaryForeground} />
                 <View style={{ flex: 1 }}>
                   <Txt style={adminText.title} numberOfLines={1}>{p.full_name || p.email}</Txt>
                   <Txt style={adminText.caption} numberOfLines={1}>{p.email} · {dateLabel(p.created_at)}</Txt>
@@ -87,7 +87,7 @@ export default function AdminOverview() {
           </Panel>
         </View>
       )}
-    </Screen>
+    </AdminScreen>
   );
 }
 

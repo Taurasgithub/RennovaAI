@@ -361,12 +361,12 @@ function CenterTab({ label, onPress, bg, labelColor }: { label: string; onPress:
 export function BrandTabBar({ state, descriptors, emitter, navigateToTab, dark, center }: BottomTabBarProps & { dark?: boolean; center?: { label: string; onPress: () => void } }) {
   const insets = useSafeAreaInsets();
   const { ur } = useT();
-  // `dark` = the admin console (theme/admin.ts): teal marks the active tab, amber stays for attention only.
+  // `dark` = the admin console style (theme/admin.ts): white bar, deep-teal active tab.
   const bg = dark ? admin.bar : colors.white;
   const off = dark ? admin.subtle : colors.textSubtle;
-  const onIcon = dark ? admin.primary : colors.tealDark;
+  const onIcon = dark ? admin.primaryText : colors.tealDark;
   const onBg = dark ? admin.primarySoft : colors.tealTint;
-  const onLabel = dark ? admin.foreground : colors.tealDark;
+  const onLabel = dark ? admin.primaryText : colors.tealDark;
 
   const items: ReactNode[] = state.routes.map((route, index) => {
     const { options } = descriptors[route.key];

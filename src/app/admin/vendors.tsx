@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOutLeft, LinearTransition } from 'react-native-reanimated';
 import { useAdminData } from '../../admin/useAdminData';
-import { AdminButton, AdminHeader, adminText, EmptyPanel, Panel, Pill, Segmented, SkeletonList } from '../../components/admin/kit';
+import { AdminButton, AdminScreen, AdminHeader, adminText, EmptyPanel, Panel, Pill, Segmented, SkeletonList } from '../../components/admin/kit';
 import { HouseAvatar, WindowGrid } from '../../components/brand';
 import { enter } from '../../components/motion';
-import { Screen, Txt } from '../../components/ui';
+import { Txt } from '../../components/ui';
 import { cityLabel, serviceLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
 import type { VendorProfile, VendorStatus } from '../../lib/supabase';
@@ -36,7 +36,7 @@ export default function AdminVendors() {
   const count = (f: Filter) => data.vendors.filter((v) => f === 'all' || v.status === f).length;
 
   return (
-    <Screen back={false} bg={admin.background} refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}>
+    <AdminScreen refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}>
       <AdminHeader kicker={t('role.admin')} title={t('admin.vendorsTitle')} sub={t('admin.vendorsSubtitle')} />
       <Segmented items={FILTERS.map((f) => ({ id: f.id, label: t(f.label), count: count(f.id), tone: f.tone }))} value={filter} onChange={setFilter} />
       {!!data.error && <Txt style={[adminText.sub, { color: admin.danger, marginTop: spacing.sm }]}>{data.error}</Txt>}
@@ -55,7 +55,7 @@ export default function AdminVendors() {
           ))}
         </View>
       )}
-    </Screen>
+    </AdminScreen>
   );
 }
 

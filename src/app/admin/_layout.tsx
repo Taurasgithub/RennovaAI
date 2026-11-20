@@ -58,7 +58,7 @@ function Sidebar() {
 
   return (
     <View style={styles.shell}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <View style={styles.sidebar}>
         <View style={styles.brand}>
           <Image source={require('../../../assets/images/logo-mark.png')} style={{ width: 38, height: 38 }} contentFit="contain" />
@@ -87,8 +87,8 @@ function Sidebar() {
               style={(state) => [styles.navItem, on && styles.navOn, (state as { hovered?: boolean }).hovered && !on && styles.navHover]}
             >
               {on && <View style={styles.navMarker} />}
-              <Ionicons name={on ? n.active : n.icon} size={19} color={on ? admin.primary : admin.muted} />
-              <Txt style={[styles.navText, on && { color: admin.foreground, fontFamily: fonts.bold }]}>{t(n.label)}</Txt>
+              <Ionicons name={on ? n.active : n.icon} size={19} color={on ? admin.primaryText : admin.muted} />
+              <Txt style={[styles.navText, on && { color: admin.primaryText, fontFamily: fonts.bold }]}>{t(n.label)}</Txt>
             </Pressable>
           );
         })}
