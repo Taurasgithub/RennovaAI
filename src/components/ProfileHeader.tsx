@@ -8,7 +8,7 @@ import { T, tap } from './ui';
 
 const BAND: Record<'teal' | 'amber' | 'navy', { band: string; avatar: string; initials: string }> = {
   teal: { band: colors.teal, avatar: colors.navy, initials: colors.white }, // customer
-  amber: { band: colors.navy, avatar: colors.amber, initials: colors.navy }, // vendor
+  amber: { band: colors.teal, avatar: colors.amber, initials: '#1A1205' }, // vendor: teal band, amber avatar (no navy)
   navy: { band: colors.navy, avatar: colors.teal, initials: colors.white }, // admin
 };
 

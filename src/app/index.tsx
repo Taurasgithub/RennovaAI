@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
+import { useRecovery } from '../auth/recovery';
 import { useApp } from '../store/useApp';
 import { colors } from '../theme';
 
@@ -8,6 +9,7 @@ import { colors } from '../theme';
 export default function Index() {
   const { enabled, ready, session, profile } = useAuth();
   const onboarded = useApp((s) => s.onboarded && !!s.user);
+  const recovering = useRecovery((s) => s.active);
 
   // No Supabase configured: on-device mode, as before.
   if (!enabled) return <Redirect href={onboarded ? '/(tabs)' : '/onboarding'} />;
@@ -19,6 +21,8 @@ export default function Index() {
       </View>
     );
   if (!session || !profile) return <Redirect href="/onboarding" />;
+  // Signed in from a password-reset link: choose the new password first.
+  if (recovering) return <Redirect href="/auth/reset-password" />;
   if (!profile.full_name) return <Redirect href={{ pathname: '/onboarding', params: { step: 'profile' } }} />;
   if (profile.role === 'admin') return <Redirect href="/admin" />;
   if (profile.role === 'vendor') return <Redirect href="/vendor-hub" />;

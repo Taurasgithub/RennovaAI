@@ -6,7 +6,7 @@ import { DesignCompare } from '../../components/DesignPreview';
 import { Badge, Button, Card, Chip, Divider, EmptyState, IconButton, IconTile, Row, Screen, T } from '../../components/ui';
 import { config } from '../../config';
 import { confirmAction, notify } from '../../lib/dialogs';
-import { CountUp } from '../../components/motion';
+import { CountUp } from '../../components/CountUp';
 import { dropImage, keepImage } from '../../lib/images';
 import { PALETTES } from '../../data/catalog';
 import { ceilingLabel, cityLabel, designName, extraLabel, floorLabel, lineLabel, listJoin, paletteLabel, roomLabel, styleLabel, useT, wallLabel } from '../../i18n';

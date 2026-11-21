@@ -8,7 +8,8 @@ import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } 
 import { admin, toneColors, type AdminTone } from '../../theme/admin';
 import { fonts, spacing } from '../../theme';
 import { Sparkle } from '../brand';
-import { CountUp, Skeleton, Tappable } from '../motion';
+import { CountUp } from '../CountUp';
+import { Skeleton, Tappable } from '../motion';
 import { Screen, tap, Txt, type IconName } from '../ui';
 
 /**

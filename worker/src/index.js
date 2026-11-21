@@ -14,7 +14,8 @@ const cors = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Authorization, Content-Type',
 };
-const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...cors } });
+const json = (body, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store', ...cors } });
 
 /** Width and height from a JPEG's frame header, or null for other formats. */
 function jpegSize(bytes) {
@@ -51,7 +52,13 @@ async function userFrom(request, env) {
   });
   if (!r.ok) return null;
   const user = await r.json();
-  return user?.id ? user : null;
+  if (!user?.id) return null;
+  // Suspended accounts lose access straight away, not only when their sign-in token expires.
+  const p = await fetch(`${env.SUPABASE_URL.replace(/\/$/, '')}/rest/v1/profiles?select=status&id=eq.${encodeURIComponent(user.id)}`, {
+    headers: { Authorization: auth, apikey: env.SUPABASE_PUBLISHABLE_KEY },
+  });
+  const rows = p.ok ? await p.json() : [];
+  return rows[0]?.status === 'active' ? user : null;
 }
 
 async function visualize(request, env) {
@@ -107,7 +114,19 @@ export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
-    const page = (html) => new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' } });
+    const page = (html) =>
+      new Response(html, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600',
+          // Static pages: no scripts, no framing, no sniffing.
+          'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+          'Referrer-Policy': 'no-referrer',
+          'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        },
+      });
     if (request.method === 'GET' && pathname === '/privacy') return page(privacyPage);
     if (request.method === 'GET' && pathname === '/terms') return page(termsPage);
     // Account-deletion link for the Play Console's Data safety form.

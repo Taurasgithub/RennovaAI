@@ -12,7 +12,7 @@ import { PENDING_ROLE_KEY } from './AuthProvider';
 /** `error` is either a known code (see AUTH_ERRORS) the UI translates, or Supabase's own message. */
 export type AuthResult = { error?: string; needsConfirmation?: boolean };
 
-export const AUTH_ERRORS = ['network', 'invalid_credentials', 'user_already_exists', 'email_not_confirmed', 'over_email_send_rate_limit', 'provider_disabled'] as const;
+export const AUTH_ERRORS = ['network', 'invalid_credentials', 'user_already_exists', 'email_not_confirmed', 'over_email_send_rate_limit', 'provider_disabled', 'weak_password'] as const;
 
 function fail(error: { message: string; code?: string; status?: number }): AuthResult {
   if (error.status === 0 || /failed to fetch|network request failed|load failed/i.test(error.message)) return { error: 'network' };

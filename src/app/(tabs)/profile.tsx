@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import { confirmAction } from '../../lib/dialogs';
-import { CountUp } from '../../components/motion';
+import { CountUp } from '../../components/CountUp';
 import { Badge, Button, Card, Chip, IconTile, Row, Screen, Section, T, tap, type IconName } from '../../components/ui';
 import { config } from '../../config';
 import { useAuth } from '../../auth/AuthProvider';
