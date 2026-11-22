@@ -49,3 +49,6 @@ server/node_modules/
 # Cloudflare Worker
 worker/node_modules/
 .wrangler/
+
+# Built public site (npm run site:build)
+site/dist/

@@ -8,16 +8,22 @@ import {
 } from '@expo-google-fonts/montserrat';
 import { NotoNastaliqUrdu_400Regular, NotoNastaliqUrdu_700Bold } from '@expo-google-fonts/noto-nastaliq-urdu';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from '../auth/AuthProvider';
+import { CrashScreen } from '../components/CrashScreen';
+import { installCrashHandler, setCrashScreen } from '../lib/crash';
 import { useApp } from '../store/useApp';
 import { colors } from '../theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+installCrashHandler();
+
+/** A screen that crashes shows a friendly "Try again" page instead of a blank screen, and is reported. */
+export const ErrorBoundary = CrashScreen;
 
 // Icon fonts draw private-use glyphs that screen readers announce as junk characters. Icons here are
 // decoration; buttons carry their own labels, so hide every icon from assistive tech by default.
@@ -35,6 +41,8 @@ export default function RootLayout() {
     NotoNastaliqUrdu_400Regular,
     NotoNastaliqUrdu_700Bold,
   });
+  const pathname = usePathname();
+  useEffect(() => setCrashScreen(pathname), [pathname]);
   const hydrated = useApp((s) => s.hydrated);
   const ready = (fontsLoaded || !!fontError) && hydrated;
 

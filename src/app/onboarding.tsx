@@ -342,19 +342,23 @@ export default function Onboarding() {
   // Once signed in: a complete profile goes straight to its area; a new account fills in the profile step.
   const profile = auth.profile;
   const recovering = useRecovery((s) => s.active);
+  // Mid password reset this screen stays mounted underneath "Set new password"; leave navigation to that screen.
+  const signedIn = auth.enabled && !!profile && !recovering;
   useEffect(() => {
-    // Mid password reset this screen stays mounted underneath "Set new password"; leave navigation to that screen.
-    if (!auth.enabled || !profile || recovering) return;
-    if (profile.full_name) router.replace('/');
-    else {
-      // Google gives the name as full_name/name; native Apple sign-in saves full_name (first sign-in only).
-      const meta = auth.session?.user.user_metadata ?? {};
-      const providerName = String(meta.full_name ?? meta.name ?? '').trim();
-      setName((n) => n || providerName);
-      setPhone((p) => p || profile.phone);
-      setStep(PROFILE);
-    }
-  }, [auth.enabled, auth.session, profile, recovering, router]);
+    if (signedIn && profile?.full_name) router.replace('/');
+  }, [signedIn, profile?.full_name, router]);
+  // A new account (no name yet) fills in the profile step. Adjusted during render, once per account,
+  // instead of setting state inside an effect (https://react.dev/learn/you-might-not-need-an-effect).
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
+  if (signedIn && profile && !profile.full_name && prefilledFor !== profile.id) {
+    setPrefilledFor(profile.id);
+    // Google gives the name as full_name/name; native Apple sign-in saves full_name (first sign-in only).
+    const meta = auth.session?.user.user_metadata ?? {};
+    const providerName = String(meta.full_name ?? meta.name ?? '').trim();
+    setName((n) => n || providerName);
+    setPhone((p) => p || profile.phone);
+    setStep(PROFILE);
+  }
 
   const finish = async () => {
     if (auth.enabled) {

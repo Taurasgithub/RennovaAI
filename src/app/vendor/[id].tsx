@@ -20,16 +20,19 @@ const CHECKS: TKey[] = ['vendor.check1', 'vendor.check2', 'vendor.check3', 'vend
 /** Sample listing, approved vendor account, or (for a vendor previewing themselves) their own unapproved profile. */
 function useVendor(id: string | undefined) {
   const listed = useMarketplace((s) => s.accountVendors.find((v) => v.id === id)) ?? sampleVendors().find((v) => v.id === id);
-  const [fetched, setFetched] = useState<Vendor | null | undefined>(listed ? null : undefined);
+  // Only an unlisted account needs a fetch; everything else is known straight away (no state update in the effect).
+  const needsFetch = !listed && !!id && accountsEnabled();
+  const [loaded, setFetched] = useState<Vendor | null | undefined>(undefined);
+  const fetched = needsFetch ? loaded : null;
   useEffect(() => {
-    if (listed || !id || !accountsEnabled()) return setFetched(null);
+    if (!needsFetch) return;
     supabase
       .from('vendor_profiles')
       .select('*')
       .eq('user_id', id)
       .maybeSingle<VendorProfile>()
       .then(({ data }) => setFetched(data ? vendorFromProfile(data) : null));
-  }, [id, listed]);
+  }, [id, needsFetch]);
   // Real accounts: reviews come from completed bookings (first names only).
   const [reviews, setReviews] = useState<Vendor['reviews'] | null>(null);
   const base = listed ?? fetched ?? undefined;

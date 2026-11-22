@@ -7,14 +7,15 @@
   "observability": { "enabled": true },
 
   // Serve the privacy policy and terms (store/*.html) as pages.
-  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
 
   // Workers AI: runs the image model on your Cloudflare account, no API token needed.
   "ai": { "binding": "AI" },
 
   // At most 5 designs per signed-in user per minute (approximate, per Cloudflare location).
   "ratelimits": [
-    { "name": "RATE_LIMITER", "namespace_id": "4207", "simple": { "limit": 5, "period": 60 } }
+    { "name": "RATE_LIMITER", "namespace_id": "4207", "simple": { "limit": 5, "period": 60 } },
+    // Crash reports: per IP, so a crash loop on one phone cannot flood the log.
+    { "name": "ERROR_LIMITER", "namespace_id": "4208", "simple": { "limit": 20, "period": 60 } }
   ],
 
   // Public values (the same ones the app ships with). Used to check that requests come from signed-in users.

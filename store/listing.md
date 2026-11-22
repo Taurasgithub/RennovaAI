@@ -40,6 +40,6 @@ RennovaAI — See it before you build it.
 **Category:** House & Home
 **Tags:** home design, interior design, renovation, home improvement
 **Contact email:** support@rennovaai.com *(must be an inbox you can read; replace it before submitting)*
-**Privacy policy:** https://rennovaai-ai.binance-live-mcp.workers.dev/privacy
-**Account deletion URL:** https://rennovaai-ai.binance-live-mcp.workers.dev/delete-account
+**Privacy policy:** https://rennovaai.pages.dev/privacy
+**Account deletion URL:** https://rennovaai.pages.dev/delete-account
 **Website:** optional; leave empty if you don't have one

@@ -2,6 +2,14 @@
 
 This app targets **Android 16 (API 36)** with min SDK 24 (Android 7.0), which meets Google Play's target-API rule for new apps and updates from 31 August 2026.
 
+## TODO before publishing (dummy values)
+
+The support contacts are **dummies** for now. `npm run release-check` lists every place left, and production EAS builds stop until they are replaced:
+
+- [ ] Real support WhatsApp number → `eas.json` (`EXPO_PUBLIC_SUPPORT_WHATSAPP`, international format, no `+`)
+- [ ] Real support email → `eas.json` (`EXPO_PUBLIC_SUPPORT_EMAIL`), `store/privacy-policy.html`, `store/terms.html`, `store/listing.md`
+- [ ] Then `npm run site:deploy` so the public privacy policy and terms show the real email
+
 ## 1. One-time setup
 
 1. **Google Play developer account** — https://play.google.com/console (one-time US$25 fee).
@@ -19,11 +27,12 @@ This app targets **Android 16 (API 36)** with min SDK 24 (Android 7.0), which me
 
 - `app.json` → `android.package` is `com.rennovaai.app`. **It can never change after the first upload**, so change it now if you want another ID.
 - The database must have all migrations applied (`supabase/README.md` step 2, including `0004_projects.sql`).
-- The AI API is the Cloudflare Worker (`worker/README.md`), live at `https://rennovaai-ai.binance-live-mcp.workers.dev`. It also serves the privacy policy (`/privacy`), the terms (`/terms`) and the account-deletion page (`/delete-account`).
+- The AI API is the Cloudflare Worker (`worker/README.md`), live at `https://rennovaai-ai.binance-live-mcp.workers.dev`.
+- The public site is Cloudflare Pages project `rennovaai`: https://rennovaai.pages.dev with `/privacy`, `/terms` and `/delete-account`. Edit `store/privacy-policy.html` / `store/terms.html`, then run `npm run site:deploy`. The old Worker links redirect there.
 - Build settings live in `eas.json` → `build.preview.env` / `build.production.env`, since `.env` is git-ignored. All of them are public values (no secrets). Before the first production build, replace the two placeholders:
   - `EXPO_PUBLIC_SUPPORT_EMAIL`: an inbox you actually read. Google emails it, and users send deletion requests to it.
   - `EXPO_PUBLIC_SUPPORT_WHATSAPP`: your support number, in international format without `+` (e.g. `923001234567`).
-  The same email appears in `store/privacy-policy.html` and `store/terms.html`; update them and run `npx wrangler deploy` in `worker/`.
+  The same email appears in `store/privacy-policy.html` and `store/terms.html`; update them and run `npm run site:deploy`.
 - `EXPO_PUBLIC_PREMIUM` stays `false`. The paid Premium Design Pack is a digital upgrade, so Google Play only allows it through Play Billing, which isn't integrated yet.
 
 ## 3. Build
@@ -42,7 +51,7 @@ On the first production build EAS offers to **generate the Android upload keysto
    - Feature graphic: `store/feature-graphic-1024x500.png`
    - Phone screenshots (2–8): `store/screenshots/*.png` (1080×1920)
 3. **App content**:
-   - Privacy policy URL: `https://rennovaai-ai.binance-live-mcp.workers.dev/privacy`
+   - Privacy policy URL: `https://rennovaai.pages.dev/privacy`
    - Ads: *No ads*
    - App access: *All or some functionality is restricted*. The app needs an account, so give Google's reviewers a working login:
      - Create a customer test account (e.g. `playreview@…`) with a saved design.
@@ -52,7 +61,7 @@ On the first production build EAS offers to **generate the Android upload keysto
    - Target audience: 18+
    - Data safety: see the table below
    - Government apps: No. Financial features: *None*. RennovaAI does not process payments; customers pay vendors directly.
-   - Account deletion: in-app (Profile/Account → Delete account) and the web link `https://rennovaai-ai.binance-live-mcp.workers.dev/delete-account`.
+   - Account deletion: in-app (Profile/Account → Delete account) and the web link `https://rennovaai.pages.dev/delete-account`.
 4. **Testing → Closed testing** → create a track, add ≥12 testers (Google Group or email list), upload the `.aab`, roll out. Keep it running 14 days, collect feedback.
 5. **Apply for production**, then **Production → Create release** → upload the `.aab` (or promote the tested release) → review → roll out.
 

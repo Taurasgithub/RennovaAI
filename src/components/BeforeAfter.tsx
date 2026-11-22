@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useReducedMotion } from 'react-native-reanimated';
-import { PanResponder, StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useT } from '../i18n';
 import { colors, fonts, radius } from '../theme';
 import { Txt } from './ui';
@@ -10,6 +10,8 @@ import { Txt } from './ui';
  * Drag-to-compare slider. "after" is drawn on the left of the handle and
  * "before" on the right, so dragging right reveals more of the renovation.
  */
+const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+
 export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode; after: ReactNode; height?: number }) {
   const { t } = useT();
   const [width, setWidth] = useState(0);
@@ -17,6 +19,7 @@ export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode
   const widthRef = useRef(0);
   const startRef = useRef(0.55);
   const posRef = useRef(0.55);
+  const startX = useRef(0);
   const touched = useRef(false);
   const reduced = useReducedMotion();
 
@@ -45,29 +48,26 @@ export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode
     return () => cancelAnimationFrame(frame);
   }, [width, reduced]);
 
-  const responder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > Math.abs(g.dy),
-        onPanResponderTerminationRequest: () => false,
-        onPanResponderGrant: (e) => {
-          touched.current = true; // the person takes over from the intro sweep
-          const w = widthRef.current || 1;
-          const p = Math.min(1, Math.max(0, e.nativeEvent.locationX / w));
-          startRef.current = p;
-          posRef.current = p;
-          setPos(p);
-        },
-        onPanResponderMove: (_, g) => {
-          const w = widthRef.current || 1;
-          const p = Math.min(1, Math.max(0, startRef.current + g.dx / w));
-          posRef.current = p;
-          setPos(p);
-        },
-      }),
-    [],
-  );
+  // Plain touch-responder props (not PanResponder.create during render): they only run while a finger is down.
+  const drag = {
+    onStartShouldSetResponder: () => true,
+    onResponderTerminationRequest: () => false,
+    onResponderGrant: (e: GestureResponderEvent) => {
+      touched.current = true; // the person takes over from the intro sweep
+      const w = widthRef.current || 1;
+      const p = clamp01(e.nativeEvent.locationX / w);
+      startRef.current = p;
+      startX.current = e.nativeEvent.pageX;
+      posRef.current = p;
+      setPos(p);
+    },
+    onResponderMove: (e: GestureResponderEvent) => {
+      const w = widthRef.current || 1;
+      const p = clamp01(startRef.current + (e.nativeEvent.pageX - startX.current) / w);
+      posRef.current = p;
+      setPos(p);
+    },
+  };
 
   const x = width * pos;
 
@@ -78,7 +78,7 @@ export function BeforeAfter({ before, after, height = 260 }: { before: ReactNode
         widthRef.current = e.nativeEvent.layout.width;
         setWidth(e.nativeEvent.layout.width);
       }}
-      {...responder.panHandlers}
+      {...drag}
       accessibilityLabel={t('ba.a11y')}
     >
       <View style={StyleSheet.absoluteFill} pointerEvents="none">

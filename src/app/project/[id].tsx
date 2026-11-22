@@ -7,7 +7,7 @@ import { Celebrate } from '../../components/Celebrate';
 import { HouseBar, Marker } from '../../components/brand';
 import { DesignCompare } from '../../components/DesignPreview';
 import { Button, Card, EmptyState, IconButton, Row, Screen, Section, Stars, T } from '../../components/ui';
-import { config } from '../../config';
+import { openWhatsAppSupport } from '../../lib/support';
 import { availabilityLabel, milestoneTitle, projectTitle, useT } from '../../i18n';
 import { confirmAction, notify } from '../../lib/dialogs';
 import { dateLabel, pkr } from '../../lib/format';
@@ -140,7 +140,7 @@ function PartyCard({ booking, isVendor }: { booking: Booking; isVendor: boolean 
       </Row>
       <Row style={{ marginTop: spacing.md }} gap={spacing.md}>
         <Button title={t('project.chat')} icon="chatbubble-ellipses-outline" kind="secondary" small onPress={() => router.push(`/chat/${booking.id}`)} style={{ flex: 1 }} />
-        <Button title={t('project.support')} icon="logo-whatsapp" kind="secondary" small onPress={() => Linking.openURL(`https://wa.me/${config.supportWhatsApp}?text=${encodeURIComponent(t('project.supportMsg', { title }))}`).catch(() => {})} style={{ flex: 1 }} />
+        <Button title={t('project.support')} icon="logo-whatsapp" kind="secondary" small onPress={() => openWhatsAppSupport(t('project.support'), t('project.supportMsg', { title }))} style={{ flex: 1 }} />
       </Row>
     </Card>
   );

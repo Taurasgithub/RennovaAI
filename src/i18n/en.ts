@@ -818,6 +818,9 @@ export const en = {
   'reset.expiredBody': 'Reset links work once and only on the phone or browser where you asked for them. Request a new link from the sign-in screen.',
   'reset.backToSignIn': 'Back to sign in',
   'auth.callbackFailedBody': 'The link may have expired or was opened on a different device. Please try again.',
+  'crash.title': 'Something went wrong',
+  'crash.body': 'This screen ran into a problem. It has been reported to us. Please try again.',
+  'crash.retry': 'Try again',
 } satisfies Record<string, string>;
 
 export type TKey = keyof typeof en;

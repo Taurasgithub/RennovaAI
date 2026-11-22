@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VendorCard } from '../../components/VendorCard';
 import { Badge, Chip, EmptyState, Row, Screen, T } from '../../components/ui';
 import { config } from '../../config';
 import { SERVICE_ICONS, SERVICE_TYPES, type ServiceType } from '../../data/catalog';
 import { useMarketplace } from '../../data/marketplace';
-import { sampleVendors } from '../../data/vendors';
+import { sampleVendors, type Vendor } from '../../data/vendors';
 import { cityLabel, serviceLabel, useT } from '../../i18n';
 import { useApp } from '../../store/useApp';
 import { colors, fonts, radius, spacing } from '../../theme';
@@ -37,12 +38,13 @@ export default function Vendors() {
     [accountVendors, city, service, q, t],
   );
 
-  return (
-    <Screen back={false} title={t('vendors.title')} subtitle={t('vendors.subtitle')} padded={false}>
+  const insets = useSafeAreaInsets();
+  const header = (
+    <View>
       <View style={{ paddingHorizontal: spacing.lg }}>
         <View style={styles.search}>
           <Ionicons name="search" size={18} color={colors.textSubtle} />
-          <TextInput value={q} onChangeText={setQ} placeholder={t('vendors.search')} placeholderTextColor={colors.textSubtle} style={styles.searchInput} />
+          <TextInput value={q} onChangeText={setQ} placeholder={t('vendors.search')} placeholderTextColor={colors.textSubtle} style={styles.searchInput} accessibilityLabel={t('vendors.search')} />
         </View>
         <Row style={{ marginTop: spacing.md }} gap={6}>
           {config.cities.map((c) => <Chip key={c} label={cityLabel(c)} icon="location-outline" selected={city === c} onPress={() => setCity(c)} />)}
@@ -52,17 +54,34 @@ export default function Vendors() {
         <Chip label={t('vendors.allTrades')} selected={!service} onPress={() => setService(null)} />
         {SERVICE_TYPES.map((s) => <Chip key={s} label={serviceLabel(s)} icon={SERVICE_ICONS[s]} selected={service === s} onPress={() => setService(service === s ? null : s)} />)}
       </ScrollView>
-      <View style={{ paddingHorizontal: spacing.lg }}>
-        <Row style={{ justifyContent: 'space-between', marginBottom: spacing.md }}>
-          <T variant="small" style={{ fontFamily: fonts.semibold }}>{t('vendors.count', { n: list.length, city: cityLabel(city) })}</T>
-          <Badge label={t('vendors.beta')} tone="gray" />
-        </Row>
-        {list.length === 0 ? (
-          <EmptyState icon="people-outline" title={t('vendors.emptyTitle')} body={t('vendors.emptyBody')} />
-        ) : (
-          list.map((v) => <VendorCard key={v.id} vendor={v} onPress={() => router.push(`/vendor/${v.id}`)} />)
+      <Row style={{ justifyContent: 'space-between', marginBottom: spacing.md, paddingHorizontal: spacing.lg }}>
+        <T variant="small" style={{ fontFamily: fonts.semibold }}>{t('vendors.count', { n: list.length, city: cityLabel(city) })}</T>
+        <Badge label={t('vendors.beta')} tone="gray" />
+      </Row>
+    </View>
+  );
+
+  return (
+    <Screen back={false} title={t('vendors.title')} subtitle={t('vendors.subtitle')} scroll={false} padded={false}>
+      {/* Virtualized: the vendor directory can grow without slowing the tab. */}
+      <FlatList<Vendor>
+        data={list}
+        keyExtractor={(v) => v.id}
+        renderItem={({ item }) => (
+          <View style={{ paddingHorizontal: spacing.lg }}>
+            <VendorCard vendor={item} onPress={() => router.push(`/vendor/${item.id}`)} />
+          </View>
         )}
-      </View>
+        ListHeaderComponent={header}
+        ListEmptyComponent={<View style={{ paddingHorizontal: spacing.lg }}><EmptyState icon="people-outline" title={t('vendors.emptyTitle')} body={t('vendors.emptyBody')} /></View>}
+        initialNumToRender={6}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
+      />
     </Screen>
   );
 }

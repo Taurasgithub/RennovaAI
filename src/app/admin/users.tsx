@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { RefreshControl, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, LinearTransition, ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useAdminData } from '../../admin/useAdminData';
+import { memo, useCallback, useEffect, useState } from 'react';
+import { FlatList, Platform, RefreshControl, StyleSheet, View, type ListRenderItem } from 'react-native';
+import Animated, { FadeIn, ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAdminData, type AdminActions } from '../../admin/useAdminData';
 import { AdminButton, AdminScreen, AdminHeader, adminText, EmptyPanel, Panel, Pill, SearchField, Segmented, SkeletonList } from '../../components/admin/kit';
 import { ROLE_LABEL } from '../../components/AccountPanel';
 import { HouseAvatar } from '../../components/brand';
@@ -38,36 +39,55 @@ export default function AdminUsers() {
   const query = q.trim().toLowerCase();
   const list = data.profiles.filter((p) => matches(p, filter)).filter((p) => !query || `${p.full_name} ${p.email} ${p.phone}`.toLowerCase().includes(query));
 
-  return (
-    <AdminScreen refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}>
-      <AdminHeader kicker={t('role.admin')} title={t('admin.usersTitle')} sub={t('admin.usersSubtitle', { n: data.profiles.length })} />
-      <SearchField value={q} onChangeText={setQ} placeholder={t('admin.searchUsers')} />
-      <RoleMix profiles={data.profiles} />
-      <Segmented items={FILTERS.map((f) => ({ id: f.id, label: t(f.label), count: data.profiles.filter((p) => matches(p, f.id)).length, tone: f.tone }))} value={filter} onChange={setFilter} />
-      {!!data.error && <Txt style={[adminText.sub, { color: admin.danger, marginTop: spacing.sm }]}>{data.error}</Txt>}
+  const insets = useSafeAreaInsets();
+  const toggle = useCallback((id: string) => setOpen((o) => (o === id ? null : id)), []);
+  const meId = data.me?.id;
+  const vendorIds = new Set(data.vendors.map((v) => v.user_id));
+  const last = list.length - 1;
+  const renderItem: ListRenderItem<Profile> = ({ item: p, index }) => (
+    <View style={[styles.card, index === 0 && styles.cardFirst, index === last && styles.cardLast]}>
+      <UserRow p={p} first={index === 0} open={open === p.id} onToggle={toggle} isMe={p.id === meId} hasBusiness={p.role === 'vendor' && vendorIds.has(p.id)} actions={data.actions} />
+    </View>
+  );
 
-      {data.loading ? (
-        <SkeletonList rows={5} />
-      ) : list.length === 0 ? (
-        <EmptyPanel icon="people-outline" title={t('admin.noUsers')} />
-      ) : (
-        <Panel style={{ marginTop: spacing.md, paddingVertical: spacing.xs }}>
-          {list.map((p, i) => (
-            <Animated.View key={p.id} layout={LinearTransition.springify().damping(20)}>
-              <UserRow p={p} first={i === 0} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} data={data} />
-            </Animated.View>
-          ))}
-        </Panel>
-      )}
+  return (
+    <AdminScreen scroll={false} padded={false}>
+      {/* Virtualized: only the rows on screen are rendered, however many accounts there are. */}
+      <FlatList
+        data={data.loading ? [] : list}
+        keyExtractor={(p) => p.id}
+        renderItem={renderItem}
+        extraData={open}
+        initialNumToRender={12}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + spacing.xxl }}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}
+        ListHeaderComponent={
+          <View style={{ marginBottom: spacing.md }}>
+            <AdminHeader kicker={t('role.admin')} title={t('admin.usersTitle')} sub={t('admin.usersSubtitle', { n: data.profiles.length })} />
+            <SearchField value={q} onChangeText={setQ} placeholder={t('admin.searchUsers')} />
+            <RoleMix profiles={data.profiles} />
+            <Segmented items={FILTERS.map((f) => ({ id: f.id, label: t(f.label), count: data.profiles.filter((p) => matches(p, f.id)).length, tone: f.tone }))} value={filter} onChange={setFilter} />
+            {!!data.error && <Txt style={[adminText.sub, { color: admin.danger, marginTop: spacing.sm }]}>{data.error}</Txt>}
+          </View>
+        }
+        ListEmptyComponent={data.loading ? <SkeletonList rows={5} /> : <EmptyPanel icon="people-outline" title={t('admin.noUsers')} />}
+      />
     </AdminScreen>
   );
 }
 
-function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolean; open: boolean; onToggle: () => void; data: ReturnType<typeof useAdminData> }) {
+type RowProps = { p: Profile; first: boolean; open: boolean; onToggle: (id: string) => void; isMe: boolean; hasBusiness: boolean; actions: AdminActions };
+
+/** Memoized: only the rows whose account or open state changed re-render. */
+const UserRow = memo(function UserRow({ p, first, open, onToggle, isMe, hasBusiness, actions }: RowProps) {
   const { t } = useT();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
-  const isMe = p.id === data.me?.id;
   const suspended = p.status === 'suspended';
   const act = async (key: string, fn: () => Promise<boolean>) => {
     setBusy(key);
@@ -84,7 +104,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
   return (
     <View style={[styles.rowWrap, !first && styles.divider]}>
       {suspended && <View style={styles.suspendedBar} />}
-      <Tappable scale={0.985} onPress={() => { tap(); onToggle(); }} accessibilityRole="button" aria-expanded={open} style={styles.row}>
+      <Tappable scale={0.985} onPress={() => { tap(); onToggle(p.id); }} accessibilityRole="button" aria-expanded={open} style={styles.row}>
         <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={42} bg={ROLE_FILL[p.role]} color={p.role === 'customer' ? admin.primaryForeground : p.role === 'vendor' ? admin.attentionForeground : admin.foreground} />
         <View style={{ flex: 1 }}>
           <Txt style={[adminText.title, suspended && { color: admin.muted }]} numberOfLines={1}>
@@ -114,7 +134,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
               <Txt style={adminText.caption}>{t('edit.budget')}: {p.budget_range ? budgetLabel(p.budget_range) : t('edit.notSet')}</Txt>
             </View>
           )}
-          {p.role === 'vendor' && data.vendors.some((v) => v.user_id === p.id) && (
+          {hasBusiness && (
             <AdminButton title={t('admin.viewBusiness')} icon="storefront-outline" variant="ghost" size="sm" style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginTop: spacing.xs }} onPress={() => router.push({ pathname: '/vendor/[id]', params: { id: p.id, preview: '1' } })} />
           )}
           {isMe ? (
@@ -131,7 +151,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
                     variant={p.role === r ? 'solid' : 'outline'}
                     tone={p.role === r ? 'primary' : 'neutral'}
                     loading={busy === r}
-                    onPress={() => p.role !== r && !busy && act(r, () => data.setRole(p.id, r))}
+                    onPress={() => p.role !== r && !busy && act(r, () => actions.setRole(p.id, r))}
                   />
                 ))}
               </View>
@@ -143,7 +163,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
                 size="sm"
                 loading={busy === 'status'}
                 style={{ marginTop: spacing.md, alignSelf: 'flex-start' }}
-                onPress={() => act('status', () => data.setStatus(p.id, suspended ? 'active' : 'suspended'))}
+                onPress={() => act('status', () => actions.setStatus(p.id, suspended ? 'active' : 'suspended'))}
               />
             </>
           )}
@@ -151,7 +171,7 @@ function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolea
       )}
     </View>
   );
-}
+});
 
 /** Share of customers / vendors / admins: one segmented bar that grows in. */
 function RoleMix({ profiles }: { profiles: Profile[] }) {
@@ -184,6 +204,10 @@ function RoleMix({ profiles }: { profiles: Profile[] }) {
 }
 
 const styles = StyleSheet.create({
+  // Rows share one card: each row draws its slice, the first and last round the corners.
+  card: { backgroundColor: admin.card, borderLeftWidth: 1, borderRightWidth: 1, borderColor: admin.border, paddingHorizontal: spacing.lg },
+  cardFirst: { borderTopWidth: 1, borderTopLeftRadius: 18, borderTopRightRadius: 18, paddingTop: spacing.xs },
+  cardLast: { borderBottomWidth: 1, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, paddingBottom: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   rowWrap: { paddingVertical: spacing.md },
   divider: { borderTopWidth: 1, borderTopColor: admin.border },

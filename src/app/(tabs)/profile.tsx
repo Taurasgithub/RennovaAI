@@ -2,11 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { confirmAction } from '../../lib/dialogs';
 import { CountUp } from '../../components/CountUp';
 import { Badge, Button, Card, Chip, IconTile, Row, Screen, Section, T, tap, type IconName } from '../../components/ui';
 import { config } from '../../config';
+import { openLink, openSupportEmail, openWhatsAppSupport } from '../../lib/support';
 import { useAuth } from '../../auth/AuthProvider';
 import { AccountPanel } from '../../components/AccountPanel';
 import { ProfileHeader } from '../../components/ProfileHeader';
@@ -128,10 +129,10 @@ export default function Profile() {
       <Section title={t('profile.account')}>
         <Card style={{ paddingVertical: spacing.sm }}>
           {config.premiumEnabled && <Item icon="diamond-outline" label={t('profile.premium')} detail={t('profile.premiumDetail')} onPress={() => router.push('/premium')} />}
-          <Item icon="logo-whatsapp" label={t('profile.help')} detail={t('profile.helpHours')} onPress={() => Linking.openURL(`https://wa.me/${config.supportWhatsApp}`).catch(() => {})} />
-          <Item icon="mail-outline" label={t('profile.email')} detail={config.supportEmail} onPress={() => Linking.openURL(`mailto:${config.supportEmail}`).catch(() => {})} />
-          <Item icon="document-text-outline" label={t('profile.privacy')} onPress={() => Linking.openURL(config.privacyPolicyUrl).catch(() => {})} />
-          <Item icon="reader-outline" label={t('profile.terms')} onPress={() => Linking.openURL(config.termsUrl).catch(() => {})} />
+          <Item icon="logo-whatsapp" label={t('profile.help')} detail={t('profile.helpHours')} onPress={() => openWhatsAppSupport(t('profile.help'))} />
+          <Item icon="mail-outline" label={t('profile.email')} detail={config.supportEmail} onPress={() => openSupportEmail(t('profile.email'), 'RennovaAI support')} />
+          <Item icon="document-text-outline" label={t('profile.privacy')} onPress={() => openLink(config.privacyPolicyUrl, t('profile.privacy'))} />
+          <Item icon="reader-outline" label={t('profile.terms')} onPress={() => openLink(config.termsUrl, t('profile.terms'))} />
         </Card>
       </Section>
 

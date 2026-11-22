@@ -4,8 +4,7 @@ import type { EstimateLine } from '../lib/estimate';
 import type { MatchReason } from '../lib/matching';
 import type { BudgetRange } from '../lib/supabase';
 import type { Booking } from '../services/bookings';
-import type { Design } from '../store/useApp';
-import { useApp, type Language } from '../store/useApp';
+import { useApp, type Design, type Language } from '../store/useApp';
 import { en, type TKey } from './en';
 import { ur } from './ur';
 

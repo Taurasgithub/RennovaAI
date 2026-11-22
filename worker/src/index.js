@@ -3,8 +3,6 @@
 // Uses the Workers AI binding, so no API token is stored anywhere. See worker/README.md.
 import { buildPrompt } from '../../server/prompt.js';
 // Public pages Google Play links to (store/*.html, bundled as text; see "rules" in wrangler.jsonc).
-import privacyPage from '../../store/privacy-policy.html';
-import termsPage from '../../store/terms.html';
 
 const MODEL = '@cf/black-forest-labs/flux-2-klein-9b';
 const MAX_UPLOAD = 8 * 1024 * 1024;
@@ -110,29 +108,49 @@ async function visualize(request, env) {
   }
 }
 
+/**
+ * Crash reports from the app (src/lib/crash.ts). No sign-in needed: crashes also happen before sign-in.
+ * Reports are only written to the Worker log (Cloudflare dashboard -> Workers -> rennovaai-ai -> Logs),
+ * with no personal data: message, stack, screen, platform and app version.
+ */
+async function reportError(request, env) {
+  if (env.ERROR_LIMITER) {
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const { success } = await env.ERROR_LIMITER.limit({ key: ip });
+    if (!success) return new Response(null, { status: 429, headers: cors });
+  }
+  const raw = await request.text();
+  if (raw.length > 16000) return json({ error: 'Report too large.' }, 413);
+  let r;
+  try { r = JSON.parse(raw); } catch { return json({ error: 'Invalid report.' }, 400); }
+  const str = (v, n) => (typeof v === 'string' ? v.slice(0, n) : undefined);
+  console.error(JSON.stringify({
+    type: 'app_crash',
+    fatal: r?.fatal === true,
+    message: str(r?.message, 500),
+    stack: str(r?.stack, 6000),
+    screen: str(r?.screen, 200),
+    platform: str(r?.platform, 20),
+    os: str(r?.os, 40),
+    appVersion: str(r?.appVersion, 40),
+    update: str(r?.update, 80),
+  }));
+  return new Response(null, { status: 204, headers: cors });
+}
+
 export default {
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
-    const page = (html) =>
-      new Response(html, {
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'public, max-age=3600',
-          // Static pages: no scripts, no framing, no sniffing.
-          'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-          'X-Content-Type-Options': 'nosniff',
-          'X-Frame-Options': 'DENY',
-          'Referrer-Policy': 'no-referrer',
-          'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        },
-      });
-    if (request.method === 'GET' && pathname === '/privacy') return page(privacyPage);
-    if (request.method === 'GET' && pathname === '/terms') return page(termsPage);
-    // Account-deletion link for the Play Console's Data safety form.
-    if (request.method === 'GET' && pathname === '/delete-account') return Response.redirect(new URL('/privacy#delete-account', request.url).toString(), 302);
+    // The privacy policy and terms moved to the app's own site (Cloudflare Pages, built by scripts/build-site.mjs).
+    // Old links, including any already given to Google Play, keep working.
+    const SITE = 'https://rennovaai.pages.dev';
+    if (request.method === 'GET' && pathname === '/privacy') return Response.redirect(`${SITE}/privacy`, 301);
+    if (request.method === 'GET' && pathname === '/terms') return Response.redirect(`${SITE}/terms`, 301);
+    if (request.method === 'GET' && pathname === '/delete-account') return Response.redirect(`${SITE}/privacy#delete-account`, 301);
     if (request.method === 'GET' && pathname === '/health') return json({ ok: true, provider: 'cloudflare-worker', model: MODEL });
     if (request.method === 'POST' && pathname === '/api/visualize') return visualize(request, env);
+    if (request.method === 'POST' && pathname === '/api/errors') return reportError(request, env);
     return json({ error: 'Not found' }, 404);
   },
 };

@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { memo, useState } from 'react';
+import { Platform, RefreshControl, StyleSheet, TextInput, View, type ListRenderItem } from 'react-native';
 import Animated, { FadeIn, FadeOutLeft, LinearTransition } from 'react-native-reanimated';
-import { useAdminData } from '../../admin/useAdminData';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAdminData, type AdminActions } from '../../admin/useAdminData';
 import { AdminButton, AdminScreen, AdminHeader, adminText, EmptyPanel, Panel, Pill, Segmented, SkeletonList } from '../../components/admin/kit';
 import { HouseAvatar, WindowGrid } from '../../components/brand';
 import { enter } from '../../components/motion';
@@ -35,31 +36,45 @@ export default function AdminVendors() {
   const list = data.vendors.filter((v) => filter === 'all' || v.status === filter);
   const count = (f: Filter) => data.vendors.filter((v) => f === 'all' || v.status === f).length;
 
-  return (
-    <AdminScreen refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}>
-      <AdminHeader kicker={t('role.admin')} title={t('admin.vendorsTitle')} sub={t('admin.vendorsSubtitle')} />
-      <Segmented items={FILTERS.map((f) => ({ id: f.id, label: t(f.label), count: count(f.id), tone: f.tone }))} value={filter} onChange={setFilter} />
-      {!!data.error && <Txt style={[adminText.sub, { color: admin.danger, marginTop: spacing.sm }]}>{data.error}</Txt>}
+  const insets = useSafeAreaInsets();
+  const emails = new Map(data.profiles.map((p) => [p.id, p.email]));
+  const renderItem: ListRenderItem<VendorProfile> = ({ item: v, index }) => (
+    // Cards leaving this filter (approved, rejected…) slide away; the list closes the gap.
+    <Animated.View entering={enter(Math.min(index, 6))} exiting={FadeOutLeft.duration(260)}>
+      <VendorCard v={v} email={emails.get(v.user_id)} actions={data.actions} />
+    </Animated.View>
+  );
 
-      {data.loading ? (
-        <SkeletonList rows={3} />
-      ) : list.length === 0 ? (
-        <EmptyPanel icon="shield-checkmark-outline" title={t('admin.noApplications')} body={t('admin.noApplicationsBody')} />
-      ) : (
-        <View>
-          {list.map((v, i) => (
-            // Cards leaving this filter (approved, rejected…) slide away; the list closes the gap.
-            <Animated.View key={`${filter}-${v.user_id}`} entering={enter(i)} exiting={FadeOutLeft.duration(260)} layout={LinearTransition.springify().damping(18)}>
-              <VendorCard v={v} data={data} />
-            </Animated.View>
-          ))}
-        </View>
-      )}
+  return (
+    <AdminScreen scroll={false} padded={false}>
+      {/* Virtualized list (only on-screen cards render); Reanimated's FlatList keeps the slide-away animation. */}
+      <Animated.FlatList
+        data={data.loading ? [] : list}
+        keyExtractor={(v) => `${filter}-${v.user_id}`}
+        renderItem={renderItem}
+        itemLayoutAnimation={LinearTransition.springify().damping(18)}
+        initialNumToRender={6}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: insets.bottom + spacing.xxl }}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}
+        ListHeaderComponent={
+          <View>
+            <AdminHeader kicker={t('role.admin')} title={t('admin.vendorsTitle')} sub={t('admin.vendorsSubtitle')} />
+            <Segmented items={FILTERS.map((f) => ({ id: f.id, label: t(f.label), count: count(f.id), tone: f.tone }))} value={filter} onChange={setFilter} />
+            {!!data.error && <Txt style={[adminText.sub, { color: admin.danger, marginTop: spacing.sm }]}>{data.error}</Txt>}
+          </View>
+        }
+        ListEmptyComponent={data.loading ? <SkeletonList rows={3} /> : <EmptyPanel icon="shield-checkmark-outline" title={t('admin.noApplications')} body={t('admin.noApplicationsBody')} />}
+      />
     </AdminScreen>
   );
 }
 
-function VendorCard({ v, data }: { v: VendorProfile; data: ReturnType<typeof useAdminData> }) {
+/** Memoized: a card re-renders only when its application changes. */
+const VendorCard = memo(function VendorCard({ v, email, actions }: { v: VendorProfile; email?: string; actions: AdminActions }) {
   const { t } = useT();
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState('');
@@ -70,7 +85,6 @@ function VendorCard({ v, data }: { v: VendorProfile; data: ReturnType<typeof use
     setBusy(null);
     setRejecting(false);
   };
-  const email = data.profiles.find((p) => p.id === v.user_id)?.email;
   const status = STATUS[v.status];
 
   return (
@@ -123,22 +137,22 @@ function VendorCard({ v, data }: { v: VendorProfile; data: ReturnType<typeof use
           <TextInput value={note} onChangeText={setNote} placeholder={t('admin.rejectPh')} placeholderTextColor={admin.subtle} selectionColor={admin.primary} multiline style={styles.note} />
           <View style={[styles.row, { marginTop: spacing.sm }]}>
             <AdminButton title={t('common.cancel')} variant="outline" tone="neutral" size="sm" style={{ flex: 1 }} onPress={() => setRejecting(false)} />
-            <AdminButton title={t('admin.confirmReject')} variant="solid" tone="danger" size="sm" loading={busy === 'reject'} style={{ flex: 1 }} onPress={() => act('reject', () => data.rejectVendor(v.user_id, note))} />
+            <AdminButton title={t('admin.confirmReject')} variant="solid" tone="danger" size="sm" loading={busy === 'reject'} style={{ flex: 1 }} onPress={() => act('reject', () => actions.rejectVendor(v.user_id, note))} />
           </View>
         </Animated.View>
       ) : (
         <View style={[styles.row, { marginTop: spacing.md, flexWrap: 'wrap', gap: spacing.sm }]}>
-          {v.status !== 'approved' && <AdminButton title={t('admin.approve')} icon="checkmark" size="sm" loading={busy === 'approve'} disabled={!!busy} style={styles.action} onPress={() => act('approve', () => data.approveVendor(v.user_id))} />}
+          {v.status !== 'approved' && <AdminButton title={t('admin.approve')} icon="checkmark" size="sm" loading={busy === 'approve'} disabled={!!busy} style={styles.action} onPress={() => act('approve', () => actions.approveVendor(v.user_id))} />}
           {v.status === 'pending' && v.verification_step < 4 && (
-            <AdminButton title={t('admin.nextStep')} icon="play-forward-outline" variant="soft" tone="attention" size="sm" loading={busy === 'next'} disabled={!!busy} style={styles.action} onPress={() => act('next', () => data.advanceVendor(v))} />
+            <AdminButton title={t('admin.nextStep')} icon="play-forward-outline" variant="soft" tone="attention" size="sm" loading={busy === 'next'} disabled={!!busy} style={styles.action} onPress={() => act('next', () => actions.advanceVendor(v))} />
           )}
           {v.status !== 'rejected' && <AdminButton title={t('admin.reject')} icon="close" variant="outline" tone="danger" size="sm" disabled={!!busy} style={styles.action} onPress={() => setRejecting(true)} />}
-          {v.status !== 'pending' && <AdminButton title={t('admin.reopen')} icon="refresh" variant="outline" tone="neutral" size="sm" loading={busy === 'reopen'} disabled={!!busy} style={styles.action} onPress={() => act('reopen', () => data.reopenVendor(v.user_id))} />}
+          {v.status !== 'pending' && <AdminButton title={t('admin.reopen')} icon="refresh" variant="outline" tone="neutral" size="sm" loading={busy === 'reopen'} disabled={!!busy} style={styles.action} onPress={() => act('reopen', () => actions.reopenVendor(v.user_id))} />}
         </View>
       )}
     </Panel>
   );
-}
+});
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

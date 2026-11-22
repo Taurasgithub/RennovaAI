@@ -55,7 +55,11 @@
     "build:android": "npx eas-cli@latest build -p android --profile production",
     "build:apk": "npx eas-cli@latest build -p android --profile preview",
     "submit:android": "npx eas-cli@latest submit -p android --profile production",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "site:build": "node scripts/build-site.mjs",
+    "site:deploy": "node scripts/build-site.mjs && cd worker && npx wrangler pages deploy ../site/dist --project-name rennovaai --branch main",
+    "release-check": "node scripts/release-check.mjs",
+    "eas-build-pre-install": "node scripts/release-check.mjs --eas"
   },
   "private": true
 }

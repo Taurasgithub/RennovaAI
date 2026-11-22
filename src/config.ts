@@ -14,10 +14,12 @@ export const config = {
    * iPhone always shows it: it uses Apple's native sheet, which needs no secret.
    */
   appleWebSignIn: process.env.EXPO_PUBLIC_APPLE_WEB_SIGNIN === 'true',
+  // TODO(release): DUMMY support contacts. Replace in eas.json (and store/*.html) with the real ones;
+  // `npm run release-check` fails, and production EAS builds stop, while these placeholders remain.
   supportWhatsApp: process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? '923000000000',
   supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? 'support@rennovaai.com',
-  privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? 'https://rennovaai.com/privacy',
-  termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? 'https://rennovaai.com/terms',
+  privacyPolicyUrl: process.env.EXPO_PUBLIC_PRIVACY_URL ?? 'https://rennovaai.pages.dev/privacy',
+  termsUrl: process.env.EXPO_PUBLIC_TERMS_URL ?? 'https://rennovaai.pages.dev/terms',
 
   /**
    * Paid Premium Design Pack. Off until Google Play Billing is integrated: Play requires its own billing

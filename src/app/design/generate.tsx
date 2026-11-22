@@ -2,8 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBreathe, useSpin } from '../../components/motion';
 import { Button, T } from '../../components/ui';
 import { estimateCost } from '../../lib/estimate';
 import { keepImage } from '../../lib/images';
@@ -22,27 +24,15 @@ export default function Generate() {
   const { draft, saveDesign, user, designs } = useApp(useShallow((s) => ({ draft: s.draft, saveDesign: s.saveDesign, user: s.user, designs: s.designs })));
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const spin = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  // Ring spin and sparkle pulse run on the UI thread (Reanimated) and stop when the phone asks for reduced motion.
+  const spinStyle = useSpin(2600);
+  const pulseStyle = useBreathe(0.12, 900);
   const started = useRef(false);
 
   useEffect(() => {
-    const a = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 2600, easing: Easing.linear, useNativeDriver: true }));
-    const b = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
-      ]),
-    );
-    a.start();
-    b.start();
-    const t = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 700);
-    return () => {
-      a.stop();
-      b.stop();
-      clearInterval(t);
-    };
-  }, [spin, pulse]);
+    const timer = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 700);
+    return () => clearInterval(timer);
+  }, []);
 
   const run = async () => {
     setError(null);
@@ -78,15 +68,12 @@ export default function Generate() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.12] });
-
   return (
     <LinearGradient colors={[colors.navy, colors.navyDeep]} style={[styles.wrap, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xl }]}>
       <View style={styles.center}>
         <View style={styles.houseRing}>
-          <Animated.View style={[styles.ring, { transform: [{ rotate }] }]} />
-          <Animated.View style={{ transform: [{ scale }] }}>
+          <Animated.View style={[styles.ring, spinStyle]} />
+          <Animated.View style={pulseStyle}>
             <Ionicons name="sparkles" size={64} color={colors.amber} />
           </Animated.View>
         </View>
