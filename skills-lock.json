@@ -1,6 +1,20 @@
 {
   "version": 2,
   "skills": {
+    "agent-device": {
+      "source": "callstackincubator/agent-skills",
+      "commit": "59e9d17446a248b21d86f078fcd0bd2d36db1ca4",
+      "sourceType": "github",
+      "skillPath": "plugins/vendored/.agents/skills/agent-device/SKILL.md",
+      "computedHash": "66db9bb1825e9ce14b9251f08b0240ad1959777236d0119e636192a9c356017e"
+    },
+    "github-actions": {
+      "source": "callstackincubator/agent-skills",
+      "commit": "59e9d17446a248b21d86f078fcd0bd2d36db1ca4",
+      "sourceType": "github",
+      "skillPath": "skills/github-actions/SKILL.md",
+      "computedHash": "ad180ec4e5dbc0b73695c269cd9e1bae465222ab7afb27ea4df2c162efcaadee"
+    },
     "gluestack-ui-v5": {
       "source": "gluestack/agent-skills",
       "commit": "12ba10a0df78a65934d15fb217d9c89df949f826",
@@ -14,6 +28,13 @@
       "sourceType": "github",
       "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
       "computedHash": "605686282fb6812d8e3f4b1a06c9fb8ba7be4d7395090f41f221a9ba5a3dbe6b"
+    },
+    "vercel-react-native-skills": {
+      "source": "vercel-labs/agent-skills",
+      "commit": "5a37a6329fbad3666c3207392a6a7c0110e92efb",
+      "sourceType": "github",
+      "skillPath": "skills/react-native-skills/SKILL.md",
+      "computedHash": "4c160f1f4e623b989cadb71f42a0813be574d172acf5e32a6411c87f3e28c05a"
     }
   }
 }
