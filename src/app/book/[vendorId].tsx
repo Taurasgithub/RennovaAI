@@ -67,7 +67,7 @@ export default function Book() {
         start,
         note: note.trim(),
       });
-      router.replace(`/project/${id}`);
+      router.replace({ pathname: '/project/[id]', params: { id, celebrate: '1' } });
     } catch (e) {
       notify(t('book.failed'), e instanceof Error ? e.message : undefined);
     } finally {

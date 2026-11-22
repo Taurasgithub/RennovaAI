@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { isValidElement, useRef, type ComponentProps, type ReactNode } from 'react';
+import { Children, isValidElement, useRef, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,6 +17,7 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { AnimatedPressable, Reveal, usePressScale } from './motion';
 import { KEYBOARD_BEHAVIOR, useKeepFocusedInputVisible, type ScrollViewRef } from './keyboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
@@ -129,21 +130,25 @@ export function Button({
 }) {
   const c = btnColors[kind];
   const off = disabled || loading;
+  const press = usePressScale(kind === 'ghost' ? 0.97 : 0.95);
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       aria-disabled={!!off}
+      onPressIn={off ? undefined : press.onPressIn}
+      onPressOut={press.onPressOut}
       onPress={() => {
         if (off) return;
         tap();
         onPress?.();
       }}
-      style={({ pressed }) => [
+      style={[
         styles.btn,
         small && styles.btnSmall,
-        { backgroundColor: c.bg, borderColor: c.border ?? c.bg, opacity: off ? 0.5 : pressed ? 0.85 : 1 },
+        { backgroundColor: c.bg, borderColor: c.border ?? c.bg, opacity: off ? 0.5 : 1 },
         kind === 'ghost' && { borderColor: 'transparent' },
         style,
+        press.style,
       ]}
     >
       {loading ? (
@@ -155,44 +160,53 @@ export function Button({
           {iconRight && <Ionicons name={iconRight} size={small ? 16 : 19} color={c.fg} />}
         </>
       )}
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 export function IconButton({ icon, onPress, color = colors.navy, bg = colors.white, size = 40, label }: { icon: IconName; onPress: () => void; color?: string; bg?: string; size?: number; label: string }) {
+  const press = usePressScale(0.88);
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={8}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       onPress={() => {
         tap();
         onPress();
       }}
-      style={({ pressed }) => [{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 }, bg === colors.white && { borderWidth: 1.5, borderColor: colors.line }]}
+      style={[{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }, bg === colors.white && { borderWidth: 1.5, borderColor: colors.line }, press.style]}
     >
       <Ionicons name={icon} size={size * 0.5} color={color} />
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 /* ---------- Layout ---------- */
 
 export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
-  if (onPress)
-    return (
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          tap();
-          onPress();
-        }}
-        style={({ pressed }) => [styles.card, style, pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] }]}
-      >
-        {children}
-      </Pressable>
-    );
+  if (onPress) return <PressableCard style={style} onPress={onPress}>{children}</PressableCard>;
   return <View style={[styles.card, style]}>{children}</View>;
+}
+
+function PressableCard({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress: () => void }) {
+  const press = usePressScale(0.975);
+  return (
+    <AnimatedPressable
+      accessibilityRole="button"
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      style={[styles.card, style, press.style]}
+    >
+      {children}
+    </AnimatedPressable>
+  );
 }
 
 export function Header({ title, subtitle, right, back = true, dark }: { title?: string; subtitle?: string; right?: ReactNode; back?: boolean; dark?: boolean }) {
@@ -270,7 +284,8 @@ export function Screen({
           showsVerticalScrollIndicator={false}
           refreshControl={refreshControl}
         >
-          {children}
+          {/* Each top-level block rises into place, one after another. */}
+          {Children.map(children, (child, i) => (isValidElement(child) ? <Reveal index={i}>{child}</Reveal> : child))}
         </ScrollView>
       ) : (
         <View style={[{ flex: 1 }, content]}>{children}</View>
@@ -303,20 +318,23 @@ export function Section({ title, action, onAction, children, style }: { title: s
 /* ---------- Small pieces ---------- */
 
 export function Chip({ label, selected, onPress, icon, color }: { label: string; selected?: boolean; onPress?: () => void; icon?: IconName; color?: string }) {
+  const press = usePressScale(0.92);
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       aria-selected={!!selected}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       onPress={() => {
         tap();
         onPress?.();
       }}
-      style={[styles.chip, selected && { backgroundColor: colors.navy, borderColor: colors.navy }]}
+      style={[styles.chip, selected && { backgroundColor: colors.navy, borderColor: colors.navy }, press.style]}
     >
       {color && <View style={[styles.swatchDot, { backgroundColor: color }]} />}
       {icon && <Ionicons name={icon} size={15} color={selected ? colors.white : colors.navy} />}
       <Txt style={[styles.chipText, selected && { color: colors.white }]}>{label}</Txt>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 

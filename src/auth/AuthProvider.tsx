@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMarketplace } from '../data/marketplace';
 import { useBookings } from '../services/bookings';
+import { useRecovery } from './recovery';
 import { startDesignSync } from '../services/designSync';
 import { accountsEnabled, supabase, type Profile, type Role, type VendorProfile } from '../lib/supabase';
 import { useApp, type User } from '../store/useApp';
@@ -88,11 +89,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
       return;
     }
-    const [{ data: p }, { data: v }] = await Promise.all([
+    const [{ data: p, error: pErr, status: pStatus }, { data: v }] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', s.user.id).maybeSingle<Profile>(),
       supabase.from('vendor_profiles').select('*').eq('user_id', s.user.id).maybeSingle<VendorProfile>(),
     ]);
     if (userId.current !== s.user.id) return; // signed out / switched while loading
+
+    // The server rejected the stored session (expired, revoked, forged) or the account no longer
+    // exists: drop it locally and start over, instead of waiting forever for a profile.
+    if (pStatus === 401 || (pErr && /jwt|token/i.test(pErr.message)) || (!pErr && !p)) {
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      userId.current = null;
+      setSession(null);
+      setProfile(null);
+      setVendor(null);
+      setReady(true);
+      return;
+    }
 
     let prof = p ?? null;
     if (prof?.status === 'suspended') {
@@ -130,7 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       // TOKEN_REFRESHED keeps the same user — no need to refetch the profile.
       if (event === 'TOKEN_REFRESHED' && s?.user.id === userId.current) return setSession(s);
-      if (event === 'SIGNED_OUT') resetLocalData();
+      if (event === 'PASSWORD_RECOVERY') useRecovery.getState().setActive(true);
+      if (event === 'SIGNED_OUT') {
+        useRecovery.getState().setActive(false);
+        resetLocalData();
+      }
       // Supabase advises against awaiting other Supabase calls inside this callback.
       setTimeout(() => load(s), 0);
     });

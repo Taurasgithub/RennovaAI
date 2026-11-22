@@ -6,6 +6,7 @@ import { DesignCompare } from '../../components/DesignPreview';
 import { Badge, Button, Card, Chip, Divider, EmptyState, IconButton, IconTile, Row, Screen, T } from '../../components/ui';
 import { config } from '../../config';
 import { confirmAction, notify } from '../../lib/dialogs';
+import { CountUp } from '../../components/CountUp';
 import { dropImage, keepImage } from '../../lib/images';
 import { PALETTES } from '../../data/catalog';
 import { ceilingLabel, cityLabel, designName, extraLabel, floorLabel, lineLabel, listJoin, paletteLabel, roomLabel, styleLabel, useT, wallLabel } from '../../i18n';
@@ -134,7 +135,7 @@ export default function Result() {
           <Badge label={t('common.daysApproxUpper', { n: design.estimate.days })} tone="navy" icon="time-outline" />
         </Row>
         <T style={{ fontFamily: fonts.extrabold, fontSize: 24, color: colors.navy, marginTop: spacing.sm }}>
-          {pkr(design.estimate.low)} – {pkr(design.estimate.high)}
+          <CountUp value={design.estimate.low} format={pkr} /> – <CountUp value={design.estimate.high} format={pkr} />
         </T>
         <T variant="small" style={{ marginTop: 4 }}>{t('result.includes', { city: cityLabel(city) })}</T>
         <Button title={t('result.breakdown')} kind="ghost" iconRight="chevron-forward" small onPress={() => router.push({ pathname: '/design/estimate', params: { id: design.id } })} style={{ alignSelf: 'flex-start', marginTop: spacing.sm, paddingHorizontal: 0 }} />

@@ -28,6 +28,14 @@ In **SQL Editor → New query**, run each file once, in order:
 4. [`migrations/0004_projects.sql`](migrations/0004_projects.sql): saved designs (synced from the phone) and their private `designs` photo bucket; bookings, work stages and chat; public vendor ratings; and `delete_my_account()` for in-app account deletion (required by Google Play). It also turns on live updates (Realtime) for bookings and chat.
 
    Bookings are request-based and no money moves through the app. The customer sends a request, the vendor accepts or declines it, the vendor marks each of the 3 stages done, and the customer confirms each one and pays the vendor directly. Every change goes through a database function that checks who is calling; users cannot edit these tables directly.
+5. [`migrations/0005_security_hardening.sql`](migrations/0005_security_hardening.sql): security fixes from the November 2026 review:
+   - Internal trigger helpers can't be called through the API.
+   - Photo buckets accept only images (5 MB avatars, 10 MB others).
+   - Public buckets can't be listed (files still load by URL).
+   - Bookings only keep image paths from the customer's own folder.
+   - No new messages on declined or cancelled bookings.
+
+   Also turn on **Authentication → Attack Protection → Leaked password protection** if your plan includes it.
 
 ## 3. Auth settings
 **Authentication → URL Configuration**

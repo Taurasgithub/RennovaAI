@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import * as ExpoCrypto from 'expo-crypto';
 import { AppState, Platform } from 'react-native';
 import { config } from '../config';
 import { authStorage } from './authStorage';
@@ -55,6 +56,15 @@ export type VendorProfile = {
 
 /** Accounts are on when the Supabase URL and publishable key are set in .env; otherwise the app runs on-device only. */
 export const accountsEnabled = () => config.supabaseUrl.length > 0 && config.supabaseKey.length > 0;
+
+// Phones (Hermes) have crypto.getRandomValues but no crypto.subtle, so sign-in would fall back to the
+// weaker "plain" PKCE method. Expo's native SHA-256 lets Supabase use S256, as on the web.
+if (Platform.OS !== 'web' && typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.subtle === 'undefined') {
+  Object.defineProperty(globalThis.crypto, 'subtle', {
+    value: { digest: (algorithm: string, data: BufferSource) => ExpoCrypto.digest(algorithm as ExpoCrypto.CryptoDigestAlgorithm, data) },
+    configurable: true,
+  });
+}
 
 export const supabase = createClient(config.supabaseUrl || 'http://localhost', config.supabaseKey || 'missing-key', {
   auth: {

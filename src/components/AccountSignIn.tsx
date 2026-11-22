@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import { isStrongPassword, MIN_PASSWORD } from '../lib/password';
 import { AUTH_ERRORS, signInWithApple, signInWithEmail, signInWithProvider, signUpWithEmail, sendPasswordReset } from '../auth/actions';
 import { useAuth } from '../auth/AuthProvider';
 import { config } from '../config';
@@ -13,7 +14,6 @@ import { T, tap, Txt } from './ui';
 type AccountType = 'customer' | 'vendor';
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD = 8;
 
 /** Real sign-in (Supabase): account type, Google / Apple, and email + password. */
 export function AccountSignIn() {
@@ -55,6 +55,8 @@ export function AccountSignIn() {
   const submitEmail = () => {
     if (!EMAIL.test(email.trim())) return setError(t('auth.emailInvalid'));
     if (mode === 'signup' && password.length < MIN_PASSWORD) return setError(t('auth.passwordShort', { n: MIN_PASSWORD }));
+    // Matches Supabase → Authentication → Email → Password requirements ("lowercase, uppercase, digits and symbols").
+    if (mode === 'signup' && !isStrongPassword(password)) return setError(t('auth.passwordRules'));
     if (!password) return setError(t('auth.passwordMissing'));
     run(() => (mode === 'signup' ? signUpWithEmail(email, password, type) : signInWithEmail(email, password)));
   };
@@ -151,6 +153,7 @@ export function AccountSignIn() {
           }
         />
       </View>
+      {mode === 'signup' && !error && <T variant="caption" style={styles.message}>{t('auth.passwordRulesHint')}</T>}
 
       {!!error && <T variant="small" style={[styles.message, { color: colors.danger }]}>{error}</T>}
       {!!info && <T variant="small" style={[styles.message, { color: colors.tealDeep }]}>{info}</T>}

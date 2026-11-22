@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "description": "See it before you build it \u2014 AI room previews, instant renovation estimates and verified local vendors with milestone escrow.",
+    "description": "See it before you build it — AI room previews, instant renovation estimates and verified local vendors you can book and track stage by stage.",
     "primaryColor": "#0AB49A",
     "ios": {
       "supportsTablet": false,
@@ -31,7 +31,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW"
       ],
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "allowBackup": false
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -60,7 +61,9 @@
       ],
       "expo-sqlite",
       "expo-web-browser",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "expo-image",
+      "expo-status-bar"
     ],
     "backgroundColor": "#F7F9FB",
     "extra": {

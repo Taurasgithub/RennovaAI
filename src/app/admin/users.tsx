@@ -1,25 +1,31 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { RefreshControl, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, LinearTransition, ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useAdminData } from '../../admin/useAdminData';
+import { AdminButton, AdminScreen, AdminHeader, adminText, EmptyPanel, Panel, Pill, SearchField, Segmented, SkeletonList } from '../../components/admin/kit';
 import { ROLE_LABEL } from '../../components/AccountPanel';
-import { AdminTitle, HouseAvatar, ROLE_COLOR, Swatch, TabStrip } from '../../components/brand';
-import { Button, Card, Chip, EmptyState, Row, Screen, T, tap } from '../../components/ui';
+import { HouseAvatar } from '../../components/brand';
+import { Tappable } from '../../components/motion';
+import { tap, Txt } from '../../components/ui';
 import { budgetLabel, cityLabel, styleLabel, useT, type TKey } from '../../i18n';
 import { dateLabel } from '../../lib/format';
 import type { Profile, Role } from '../../lib/supabase';
-import { colors, fonts, spacing } from '../../theme';
+import { admin, type AdminTone } from '../../theme/admin';
+import { fonts, spacing } from '../../theme';
 
 type Filter = Role | 'suspended' | 'all';
-const FILTERS: { id: Filter; label: TKey }[] = [
-  { id: 'all', label: 'admin.fAll' },
-  { id: 'customer', label: 'admin.fCustomers' },
-  { id: 'vendor', label: 'admin.fVendors' },
-  { id: 'admin', label: 'admin.fAdmins' },
-  { id: 'suspended', label: 'admin.fSuspended' },
+const FILTERS: { id: Filter; label: TKey; tone: AdminTone }[] = [
+  { id: 'all', label: 'admin.fAll', tone: 'neutral' },
+  { id: 'customer', label: 'admin.fCustomers', tone: 'primary' },
+  { id: 'vendor', label: 'admin.fVendors', tone: 'attention' },
+  { id: 'admin', label: 'admin.fAdmins', tone: 'neutral' },
+  { id: 'suspended', label: 'admin.fSuspended', tone: 'danger' },
 ];
 const ROLES: Role[] = ['customer', 'vendor', 'admin'];
+const ROLE_TONE: Record<Role, AdminTone> = { customer: 'primary', vendor: 'attention', admin: 'neutral' };
+const ROLE_FILL: Record<Role, string> = { customer: admin.primary, vendor: admin.attention, admin: admin.edge };
 
 export default function AdminUsers() {
   const { t } = useT();
@@ -28,144 +34,162 @@ export default function AdminUsers() {
   const [q, setQ] = useState('');
   const [open, setOpen] = useState<string | null>(null);
 
+  const matches = (p: Profile, f: Filter) => f === 'all' || (f === 'suspended' ? p.status === 'suspended' : p.role === f);
   const query = q.trim().toLowerCase();
-  const list = data.profiles
-    .filter((p) => filter === 'all' || (filter === 'suspended' ? p.status === 'suspended' : p.role === filter))
-    .filter((p) => !query || `${p.full_name} ${p.email} ${p.phone}`.toLowerCase().includes(query));
+  const list = data.profiles.filter((p) => matches(p, filter)).filter((p) => !query || `${p.full_name} ${p.email} ${p.phone}`.toLowerCase().includes(query));
 
   return (
-    <Screen back={false} bg={colors.mist}>
-      <AdminTitle kicker={t('role.admin')} title={t('admin.usersTitle')} sub={t('admin.usersSubtitle', { n: data.profiles.length })} />
-      <View style={styles.search}>
-        <Ionicons name="search" size={18} color={colors.textSubtle} />
-        <TextInput value={q} onChangeText={setQ} placeholder={t('admin.searchUsers')} placeholderTextColor={colors.textSubtle} style={styles.searchInput} autoCapitalize="none" />
-      </View>
+    <AdminScreen refreshControl={<RefreshControl refreshing={false} onRefresh={data.reload} tintColor={admin.primary} colors={[admin.primary]} />}>
+      <AdminHeader kicker={t('role.admin')} title={t('admin.usersTitle')} sub={t('admin.usersSubtitle', { n: data.profiles.length })} />
+      <SearchField value={q} onChangeText={setQ} placeholder={t('admin.searchUsers')} />
       <RoleMix profiles={data.profiles} />
-      <TabStrip items={FILTERS.map((f) => ({ id: f.id, label: t(f.label) }))} value={filter} onChange={setFilter} />
-      {!!data.error && <T variant="small" style={{ color: colors.alert, marginTop: spacing.sm }}>{data.error}</T>}
+      <Segmented items={FILTERS.map((f) => ({ id: f.id, label: t(f.label), count: data.profiles.filter((p) => matches(p, f.id)).length, tone: f.tone }))} value={filter} onChange={setFilter} />
+      {!!data.error && <Txt style={[adminText.sub, { color: admin.danger, marginTop: spacing.sm }]}>{data.error}</Txt>}
 
       {data.loading ? (
-        <ActivityIndicator color={colors.teal} style={{ marginTop: spacing.xxl }} />
+        <SkeletonList rows={5} />
       ) : list.length === 0 ? (
-        <EmptyState icon="people-outline" title={t('admin.noUsers')} body={t('vendors.emptyBody')} />
+        <EmptyPanel icon="people-outline" title={t('admin.noUsers')} />
       ) : (
-        <Card style={{ marginTop: spacing.md, paddingVertical: spacing.xs }}>
+        <Panel style={{ marginTop: spacing.md, paddingVertical: spacing.xs }}>
           {list.map((p, i) => (
-            <UserRow key={p.id} p={p} first={i === 0} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} data={data} />
+            <Animated.View key={p.id} layout={LinearTransition.springify().damping(20)}>
+              <UserRow p={p} first={i === 0} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)} data={data} />
+            </Animated.View>
           ))}
-        </Card>
+        </Panel>
       )}
-    </Screen>
+    </AdminScreen>
   );
 }
 
 function UserRow({ p, first, open, onToggle, data }: { p: Profile; first: boolean; open: boolean; onToggle: () => void; data: ReturnType<typeof useAdminData> }) {
   const { t } = useT();
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
   const isMe = p.id === data.me?.id;
-  const act = async (fn: () => Promise<boolean>) => {
-    setBusy(true);
+  const suspended = p.status === 'suspended';
+  const act = async (key: string, fn: () => Promise<boolean>) => {
+    setBusy(key);
     await fn();
-    setBusy(false);
+    setBusy(null);
   };
+  // The chevron turns as the row opens.
+  const turn = useSharedValue(open ? 1 : 0);
+  useEffect(() => {
+    turn.set(withSpring(open ? 1 : 0, { damping: 16, stiffness: 220, reduceMotion: ReduceMotion.System }));
+  }, [open, turn]);
+  const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value * 180}deg` }] }));
 
   return (
-    <View style={[{ paddingVertical: spacing.md }, !first && styles.divider, p.status === 'suspended' && styles.suspended]}>
-      <Pressable
-        onPress={() => {
-          tap();
-          onToggle();
-        }}
-        accessibilityRole="button"
-        aria-expanded={open}
-      >
-        <Row>
-          <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={40} bg={ROLE_COLOR[p.role]} color={p.role === 'vendor' ? colors.navy : colors.white} />
-          <View style={{ flex: 1 }}>
-            <T variant="bodyStrong" numberOfLines={1} style={{ color: p.status === 'suspended' ? colors.textMuted : colors.navy, fontFamily: fonts.extrabold }}>{p.full_name || t('admin.noName')}{isMe ? ` · ${t('admin.you')}` : ''}</T>
-            <T variant="caption" numberOfLines={1}>{p.email}{p.phone ? ` · ${p.phone}` : ''}</T>
-            <View style={{ marginTop: 4 }}>
-              <Swatch color={ROLE_COLOR[p.role]} label={t(ROLE_LABEL[p.role]) + (p.status === 'suspended' ? ` · ${t('admin.suspended')}` : '')} textColor={p.status === 'suspended' ? colors.alert : colors.navy} />
-            </View>
+    <View style={[styles.rowWrap, !first && styles.divider]}>
+      {suspended && <View style={styles.suspendedBar} />}
+      <Tappable scale={0.985} onPress={() => { tap(); onToggle(); }} accessibilityRole="button" aria-expanded={open} style={styles.row}>
+        <HouseAvatar uri={p.avatar_url} name={p.full_name || p.email} size={42} bg={ROLE_FILL[p.role]} color={p.role === 'customer' ? admin.primaryForeground : p.role === 'vendor' ? admin.attentionForeground : admin.foreground} />
+        <View style={{ flex: 1 }}>
+          <Txt style={[adminText.title, suspended && { color: admin.muted }]} numberOfLines={1}>
+            {p.full_name || t('admin.noName')}
+            {isMe ? <Txt style={{ color: admin.primaryText }}>{`  · ${t('admin.you')}`}</Txt> : null}
+          </Txt>
+          <Txt style={adminText.caption} numberOfLines={1}>{p.email}{p.phone ? ` · ${p.phone}` : ''}</Txt>
+          <View style={[styles.row, { gap: 6, marginTop: 6 }]}>
+            <Pill label={t(ROLE_LABEL[p.role])} tone={ROLE_TONE[p.role]} />
+            {suspended && <Pill label={t('admin.suspended')} tone="danger" icon="ban" />}
           </View>
-          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSubtle} />
-        </Row>
-      </Pressable>
+        </View>
+        <Animated.View style={chevron}>
+          <Ionicons name="chevron-down" size={18} color={admin.subtle} />
+        </Animated.View>
+      </Tappable>
 
       {open && (
-        <View style={styles.panel}>
-          <T variant="caption">{t('admin.joined', { date: dateLabel(p.created_at), city: cityLabel(p.city) })}</T>
-          {/* Personal profile */}
-          {!!p.job_title && <T variant="small" style={{ marginTop: spacing.sm, color: colors.text }}>{p.job_title}</T>}
-          {!!p.bio && <T variant="small" style={{ marginTop: spacing.sm, color: colors.text }}>{p.bio}</T>}
+        <Animated.View entering={FadeIn.duration(220)} style={styles.panel}>
+          <Txt style={adminText.caption}>{t('admin.joined', { date: dateLabel(p.created_at), city: cityLabel(p.city) })}</Txt>
+          {!!p.job_title && <Txt style={[adminText.body, { marginTop: spacing.sm, color: admin.foreground }]}>{p.job_title}</Txt>}
+          {!!p.bio && <Txt style={[adminText.body, { marginTop: spacing.sm }]}>{p.bio}</Txt>}
           {p.role === 'customer' && (
             <View style={{ marginTop: spacing.sm, gap: 4 }}>
-              {!!p.area && <T variant="caption">{t('edit.area')}: {p.area}</T>}
-              <T variant="caption">{t('edit.styles')}: {p.preferred_styles.length ? p.preferred_styles.map(styleLabel).join(', ') : t('edit.notSet')}</T>
-              <T variant="caption">{t('edit.budget')}: {p.budget_range ? budgetLabel(p.budget_range) : t('edit.notSet')}</T>
+              {!!p.area && <Txt style={adminText.caption}>{t('edit.area')}: {p.area}</Txt>}
+              <Txt style={adminText.caption}>{t('edit.styles')}: {p.preferred_styles.length ? p.preferred_styles.map(styleLabel).join(', ') : t('edit.notSet')}</Txt>
+              <Txt style={adminText.caption}>{t('edit.budget')}: {p.budget_range ? budgetLabel(p.budget_range) : t('edit.notSet')}</Txt>
             </View>
           )}
           {p.role === 'vendor' && data.vendors.some((v) => v.user_id === p.id) && (
-            <Button
-              title={t('admin.viewBusiness')}
-              kind="ghost"
-              small
-              iconRight="chevron-forward"
-              style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginTop: 4 }}
-              onPress={() => router.push({ pathname: '/vendor/[id]', params: { id: p.id, preview: '1' } })}
-            />
+            <AdminButton title={t('admin.viewBusiness')} icon="storefront-outline" variant="ghost" size="sm" style={{ alignSelf: 'flex-start', paddingHorizontal: 0, marginTop: spacing.xs }} onPress={() => router.push({ pathname: '/vendor/[id]', params: { id: p.id, preview: '1' } })} />
           )}
           {isMe ? (
-            <T variant="small" style={{ marginTop: spacing.sm }}>{t('admin.selfNote')}</T>
+            <Txt style={[adminText.sub, { marginTop: spacing.md }]}>{t('admin.selfNote')}</Txt>
           ) : (
             <>
-              <T variant="bodyStrong" style={{ marginTop: spacing.md, marginBottom: spacing.sm }}>{t('admin.role')}</T>
-              <Row style={{ flexWrap: 'wrap' }} gap={6}>
+              <Txt style={styles.label}>{t('admin.role')}</Txt>
+              <View style={[styles.row, { gap: 6, flexWrap: 'wrap' }]}>
                 {ROLES.map((r) => (
-                  <Chip key={r} label={t(ROLE_LABEL[r])} selected={p.role === r} onPress={() => p.role !== r && !busy && act(() => data.setRole(p.id, r))} />
+                  <AdminButton
+                    key={r}
+                    title={t(ROLE_LABEL[r])}
+                    size="sm"
+                    variant={p.role === r ? 'solid' : 'outline'}
+                    tone={p.role === r ? 'primary' : 'neutral'}
+                    loading={busy === r}
+                    onPress={() => p.role !== r && !busy && act(r, () => data.setRole(p.id, r))}
+                  />
                 ))}
-              </Row>
-              <Button
-                title={t(p.status === 'suspended' ? 'admin.reactivate' : 'admin.suspend')}
-                kind={p.status === 'suspended' ? 'primary' : 'danger'}
-                icon={p.status === 'suspended' ? 'checkmark-circle-outline' : 'ban'}
-                small
-                loading={busy}
+              </View>
+              <AdminButton
+                title={t(suspended ? 'admin.reactivate' : 'admin.suspend')}
+                icon={suspended ? 'checkmark-circle-outline' : 'ban'}
+                variant={suspended ? 'solid' : 'outline'}
+                tone={suspended ? 'primary' : 'danger'}
+                size="sm"
+                loading={busy === 'status'}
                 style={{ marginTop: spacing.md, alignSelf: 'flex-start' }}
-                onPress={() => act(() => data.setStatus(p.id, p.status === 'suspended' ? 'active' : 'suspended'))}
+                onPress={() => act('status', () => data.setStatus(p.id, suspended ? 'active' : 'suspended'))}
               />
             </>
           )}
-        </View>
+        </Animated.View>
       )}
     </View>
   );
 }
 
-/** Share of customers / vendors / admins as one flat stacked bar. */
+/** Share of customers / vendors / admins: one segmented bar that grows in. */
 function RoleMix({ profiles }: { profiles: Profile[] }) {
   const { t } = useT();
   const total = Math.max(profiles.length, 1);
   const parts = ROLES.map((r) => ({ r, n: profiles.filter((p) => p.role === r).length })).filter((x) => x.n > 0);
+  const grow = useSharedValue(0);
+  useEffect(() => {
+    if (profiles.length) grow.set(withSpring(1, { damping: 20, stiffness: 90, reduceMotion: ReduceMotion.System }));
+  }, [profiles.length, grow]);
+  const bar = useAnimatedStyle(() => ({ transform: [{ scaleX: grow.value }], transformOrigin: 'left' }));
   if (!profiles.length) return null;
   return (
-    <View>
-      <View style={styles.mixBar}>
-        {parts.map((x) => <View key={x.r} style={{ flex: x.n, backgroundColor: ROLE_COLOR[x.r] }} />)}
+    <Panel style={{ marginTop: spacing.md }}>
+      <Animated.View style={[styles.mixBar, bar]}>
+        {parts.map((x) => <View key={x.r} style={{ flex: x.n, backgroundColor: ROLE_FILL[x.r] }} />)}
+      </Animated.View>
+      <View style={[styles.row, { flexWrap: 'wrap', marginTop: spacing.md, gap: spacing.lg }]}>
+        {parts.map((x) => (
+          <View key={x.r} style={[styles.row, { gap: 8 }]}>
+            <View style={[styles.swatch, { backgroundColor: ROLE_FILL[x.r] }]} />
+            <Txt style={adminText.sub}>
+              {t(ROLE_LABEL[x.r])} <Txt style={{ color: admin.foreground, fontFamily: fonts.bold }}>{Math.round((x.n / total) * 100)}%</Txt>
+            </Txt>
+          </View>
+        ))}
       </View>
-      <Row style={{ flexWrap: 'wrap', marginTop: spacing.sm }} gap={spacing.lg}>
-        {parts.map((x) => <Swatch key={x.r} color={ROLE_COLOR[x.r]} label={`${t(ROLE_LABEL[x.r])} ${Math.round((x.n / total) * 100)}%`} />)}
-      </Row>
-    </View>
+    </Panel>
   );
 }
 
 const styles = StyleSheet.create({
-  search: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 48, borderRadius: 12, backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: spacing.md, marginTop: spacing.lg },
-  searchInput: { flex: 1, height: '100%', fontFamily: fonts.medium, fontSize: 14.5, color: colors.text },
-  divider: { borderTopWidth: 1, borderColor: colors.line },
-  suspended: { borderLeftWidth: 4, borderLeftColor: colors.alert, paddingLeft: spacing.sm, marginLeft: -spacing.lg + 4 },
-  mixBar: { flexDirection: 'row', height: 12, gap: 2, marginTop: spacing.lg },
-  panel: { marginTop: spacing.md, padding: spacing.md, borderRadius: 12, backgroundColor: colors.mist },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  rowWrap: { paddingVertical: spacing.md },
+  divider: { borderTopWidth: 1, borderTopColor: admin.border },
+  suspendedBar: { position: 'absolute', left: -spacing.lg, top: spacing.md, bottom: spacing.md, width: 3, borderRadius: 2, backgroundColor: admin.danger },
+  panel: { marginTop: spacing.md, padding: spacing.md, borderRadius: 14, backgroundColor: admin.cardRaised },
+  label: { fontFamily: fonts.bold, fontSize: 13, color: admin.foreground, marginTop: spacing.md, marginBottom: spacing.sm },
+  mixBar: { flexDirection: 'row', height: 10, gap: 3, borderRadius: 5, overflow: 'hidden' },
+  swatch: { width: 10, height: 10, borderRadius: 3 },
 });
