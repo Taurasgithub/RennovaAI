@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../auth/AuthProvider';
+import { useRecovery } from '../auth/recovery';
 import { AccountSignIn } from '../components/AccountSignIn';
 import { BeforeAfter } from '../components/BeforeAfter';
 import { KEYBOARD_BEHAVIOR, useKeepFocusedInputVisible, type ScrollViewRef } from '../components/keyboard';
@@ -340,8 +341,10 @@ export default function Onboarding() {
 
   // Once signed in: a complete profile goes straight to its area; a new account fills in the profile step.
   const profile = auth.profile;
+  const recovering = useRecovery((s) => s.active);
   useEffect(() => {
-    if (!auth.enabled || !profile) return;
+    // Mid password reset this screen stays mounted underneath "Set new password"; leave navigation to that screen.
+    if (!auth.enabled || !profile || recovering) return;
     if (profile.full_name) router.replace('/');
     else {
       // Google gives the name as full_name/name; native Apple sign-in saves full_name (first sign-in only).
@@ -351,7 +354,7 @@ export default function Onboarding() {
       setPhone((p) => p || profile.phone);
       setStep(PROFILE);
     }
-  }, [auth.enabled, auth.session, profile, router]);
+  }, [auth.enabled, auth.session, profile, recovering, router]);
 
   const finish = async () => {
     if (auth.enabled) {

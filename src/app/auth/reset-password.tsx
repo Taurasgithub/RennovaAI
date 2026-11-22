@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useAuth } from '../../auth/AuthProvider';
 import { useRecovery } from '../../auth/recovery';
+import { Celebrate } from '../../components/Celebrate';
 import { GradientButton, IconField } from '../../components/OnboardingParts';
 import { EmptyState, Row, Screen, T } from '../../components/ui';
 import { useT, type TKey } from '../../i18n';
@@ -26,7 +28,7 @@ const RULES: { key: keyof ReturnType<typeof passwordChecks>; label: TKey }[] = [
 export default function ResetPassword() {
   const { t, ur } = useT();
   const router = useRouter();
-  const { session, ready } = useAuth();
+  const { session, ready, profile } = useAuth();
   const setRecovering = useRecovery((s) => s.setActive);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -35,23 +37,22 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
 
-  const finish = () => {
-    setRecovering(false);
-    router.replace('/');
-  };
+  // After saving: show the success tick for a moment, then open the dashboard for this account's role.
+  useEffect(() => {
+    if (!done) return;
+    const timer = setTimeout(() => {
+      const home = !profile?.full_name ? '/' : profile.role === 'admin' ? '/admin' : profile.role === 'vendor' ? '/vendor-hub' : '/(tabs)';
+      if (router.canDismiss()) router.dismissAll(); // drop the sign-in screen left underneath
+      router.replace(home);
+      setRecovering(false);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [done, profile, router, setRecovering]);
 
-  if (ready && !session) {
+  if (ready && !session && !done) {
     return (
       <Screen back={false}>
         <EmptyState icon="time-outline" title={t('reset.expiredTitle')} body={t('reset.expiredBody')} action={t('reset.backToSignIn')} onAction={() => router.replace('/onboarding')} />
-      </Screen>
-    );
-  }
-
-  if (done) {
-    return (
-      <Screen back={false}>
-        <EmptyState icon="checkmark-circle-outline" title={t('reset.doneTitle')} body={t('reset.doneBody')} action={t('reset.continue')} onAction={finish} />
       </Screen>
     );
   }
@@ -78,6 +79,7 @@ export default function ResetPassword() {
   );
 
   return (
+    <>
     <Screen title={t('reset.title')} back={false}>
       <T style={{ marginTop: spacing.sm }}>{t('reset.body')}</T>
 
@@ -133,9 +135,29 @@ export default function ResetPassword() {
         <GradientButton title={t('reset.save')} onPress={submit} urdu={ur} loading={busy} />
       </View>
     </Screen>
+    {done && (
+      <Animated.View entering={FadeIn.duration(220)} style={styles.overlay} accessibilityLiveRegion="assertive" accessibilityRole="alert">
+        <View style={styles.burst}>
+          <Celebrate trigger="saved" />
+          <Animated.View entering={ZoomIn.springify().damping(12)} style={styles.tick}>
+            <Ionicons name="checkmark" size={64} color="#FFFFFF" />
+          </Animated.View>
+        </View>
+        <T variant="h2" style={styles.doneTitle}>{t('reset.doneTitle')}</T>
+        <T style={styles.doneBody}>{t('reset.doneBody')}</T>
+      </Animated.View>
+    )}
+    </>
   );
 }
 
+const GREEN = '#16A34A';
+
 const styles = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255,255,255,0.97)', alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  burst: { width: 160, height: 160, alignItems: 'center', justifyContent: 'center' },
+  tick: { width: 112, height: 112, borderRadius: 56, backgroundColor: GREEN, alignItems: 'center', justifyContent: 'center', shadowColor: GREEN, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
+  doneTitle: { marginTop: spacing.lg, color: GREEN, textAlign: 'center' },
+  doneBody: { marginTop: spacing.sm, textAlign: 'center', color: colors.textMuted },
   rules: { marginTop: spacing.lg, gap: 8, padding: spacing.md, borderRadius: 14, backgroundColor: colors.tealTint },
 });
